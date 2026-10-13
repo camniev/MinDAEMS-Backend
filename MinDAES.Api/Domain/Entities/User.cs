@@ -45,5 +45,6 @@ namespace MinDAES.Api.Domain.Entities
         public Employee? Employee { get; set; }
 
         //navigation properties
+        public ICollection<Exam> CreatedExams { get; set; } = new List<Exam>();
     }
 }

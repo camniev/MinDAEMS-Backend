@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MinDAES.Api.Domain.Entities
 {
+    [Table("APPLICANTS")]
     public class Applicant
     {
         [Key]

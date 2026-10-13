@@ -4,6 +4,7 @@ using MinDAES.Api.Domain.Enums;
 
 namespace MinDAES.Api.Domain.Entities
 {
+    [Table("EXAM_ENROLLMENTS")]
     public class ExamEnrollment
     {
         [Key]

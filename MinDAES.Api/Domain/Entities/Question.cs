@@ -4,6 +4,7 @@ using MinDAES.Api.Domain.Enums;
 
 namespace MinDAES.Api.Domain.Entities
 {
+    [Table("QUESTIONS")]
     public class Question
     {
         [Key]
@@ -39,6 +40,7 @@ namespace MinDAES.Api.Domain.Entities
         public ICollection<QuestionOption> Options { get; set; } = new List<QuestionOption>();
     }
 
+    [Table("QUESTION_OPTIONS")]
     public class QuestionOption
     {
         [Key]
