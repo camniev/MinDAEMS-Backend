@@ -17,6 +17,9 @@ namespace MinDAES.Api.Data
         public DbSet<ExamEnrollment> ExamEnrollments { get; set; }
         public DbSet<Answer> Answers { get; set; }
         public DbSet<AnswerOption> AnswerOptions { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<UserType> UserTypes { get; set; }
+        public DbSet<Employee> Employees { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
