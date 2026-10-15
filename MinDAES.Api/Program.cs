@@ -21,7 +21,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<MinDAESDbContext>(x =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("MinDAESCon");
+    var connectionString = builder.Configuration.GetConnectionString("MinDAESAppCon");
     x.UseSqlServer(connectionString, sql =>
     {
         sql.UseCompatibilityLevel(100);

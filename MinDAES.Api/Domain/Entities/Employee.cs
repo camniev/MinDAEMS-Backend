@@ -29,6 +29,5 @@ namespace MinDAES.Api.Domain.Entities
 
         // Navigation properties
         public User? User { get; set; }
-        public ICollection<Exam> CreatedExams { get; set; } = new List<Exam>();
     }
 }
