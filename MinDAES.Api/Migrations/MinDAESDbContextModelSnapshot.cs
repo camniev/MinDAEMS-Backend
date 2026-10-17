@@ -146,12 +146,6 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("ExamId");
 
-                    b.Property<string>("AccessCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("AccessCode");
-
                     b.Property<int>("AccessType")
                         .HasColumnType("int")
                         .HasColumnName("AccessType");
@@ -168,9 +162,21 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("int")
                         .HasColumnName("DurationMinutes");
 
+                    b.Property<string>("ExamCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("ExamCode");
+
                     b.Property<DateOnly>("ExamDate")
                         .HasColumnType("date")
                         .HasColumnName("ExamDate");
+
+                    b.Property<string>("ExamTitle")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("ExamTitle");
 
                     b.Property<string>("Instructions")
                         .HasMaxLength(4000)
@@ -188,12 +194,6 @@ namespace MinDAES.Api.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int")
                         .HasColumnName("Status");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("ExamTitle");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2")

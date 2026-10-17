@@ -136,3 +136,4 @@
 /Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/obj/Debug/net8.0/MinDAES.Api.genruntimeconfig.cache
 /Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/obj/Debug/net8.0/ref/MinDAES.Api.dll
 /Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/TimeZoneConverter.dll

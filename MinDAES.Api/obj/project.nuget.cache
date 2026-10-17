@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "2wwHTT3JfZw=",
+  "dgSpecHash": "lEIupeu5BuY=",
   "success": true,
   "projectFilePath": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/MinDAES.Api.csproj",
   "expectedPackageFiles": [
@@ -85,7 +85,8 @@
     "/Users/cameronnieve/.nuget/packages/system.text.json/8.0.0/system.text.json.8.0.0.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/system.threading.channels/6.0.0/system.threading.channels.6.0.0.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/system.threading.tasks.extensions/4.5.4/system.threading.tasks.extensions.4.5.4.nupkg.sha512",
-    "/Users/cameronnieve/.nuget/packages/system.windows.extensions/6.0.0/system.windows.extensions.6.0.0.nupkg.sha512"
+    "/Users/cameronnieve/.nuget/packages/system.windows.extensions/6.0.0/system.windows.extensions.6.0.0.nupkg.sha512",
+    "/Users/cameronnieve/.nuget/packages/timezoneconverter/7.2.0/timezoneconverter.7.2.0.nupkg.sha512"
   ],
   "logs": []
 }

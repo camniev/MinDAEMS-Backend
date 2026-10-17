@@ -16,7 +16,11 @@ namespace MinDAES.Api.Domain.Entities
 
         [Column("ExamTitle")]
         [MaxLength(255)]
-        public string Title { get; set; } = string.Empty;
+        public string ExamTitle { get; set; } = string.Empty;
+
+        [Column("ExamCode")] // Exam Code
+        [MaxLength(50)]
+        public string ExamCode { get; set; } = string.Empty;
 
         [Column("ExamDate")]
         public DateOnly ExamDate { get; set; }
@@ -36,10 +40,6 @@ namespace MinDAES.Api.Domain.Entities
 
         [Column("AccessType")]
         public ExamAccessType AccessType { get; set; } = ExamAccessType.Private;
-
-        [Column("AccessCode")]
-        [MaxLength(50)]
-        public string AccessCode { get; set; } = string.Empty;
 
         [Column("Status")]
         public ExamStatus Status { get; set; } = ExamStatus.Upcoming;
