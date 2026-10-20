@@ -1,10 +1,11 @@
-using System.Linq.Expressions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using MinDAES.Api.Data;
 using MinDAES.Api.Domain.DTOs;
 using MinDAES.Api.Domain.Entities;
 using MinDAES.Api.Domain.Enums;
 using MinDAES.Api.Helpers;
+using System.Linq.Expressions;
 
 namespace MinDAES.Api.Controllers
 {
@@ -63,6 +64,82 @@ namespace MinDAES.Api.Controllers
                     error = ex.Message
                 });
             }
+        }
+
+        [HttpGet("GetExamSchedules")]
+        public async Task<ActionResult<List<ExamScheduleResponseDto>>> GetExamSchedules()
+        {
+            var now = TimeHelper.GetPhilippineTime();
+
+            var exams = await _mindaEsDbContext.Exams
+                .AsNoTracking()
+                .Include(e => e.Questions)
+                    .ThenInclude(q => q.Options)
+                .Include(e => e.Enrollments)
+                    .ThenInclude(en => en.Applicant)
+                .OrderByDescending(e => e.ExamDate)
+                    .ThenByDescending(e => e.StartTime)
+                .ToListAsync();
+
+            var result = exams.Select(exam => new ExamScheduleResponseDto
+            {
+                ExamId = exam.ExamId,
+                ExamTitle = exam.ExamTitle,
+                ExamDate = exam.ExamDate,
+                StartTime = exam.StartTime,
+                DurationMinutes = exam.DurationMinutes,
+                PassingScore = exam.PassingScore,
+                Instructions = exam.Instructions,
+                AccessType = exam.AccessType == ExamAccessType.Private ? "Private" : "Public",
+                ExamCode = exam.ExamCode,
+                Status = ComputeExamStatus(exam.ExamDate, exam.StartTime, exam.DurationMinutes, now),
+
+                Questions = exam.Questions?.Select(q => new ExamQuestionResponseDto
+                {
+                    Id = q.QuestionId,
+                    Type = MapQuestionType(q.Type),
+                    Points = q.Points,
+                    Required = q.IsRequired,
+                    Text = q.Text,
+                    Options = q.Options?.Select(o => new ExamQuestionOptionResponseDto
+                    {
+                        Text = o.Text,
+                        IsCorrect = o.IsCorrect,
+                    }).ToList() ?? new List<ExamQuestionOptionResponseDto>(),
+                }).ToList() ?? new List<ExamQuestionResponseDto>(),
+
+                // Empty list until anyone's been enrolled — exam.Enrollments is just
+                // an empty collection for a freshly created exam, nothing special needed.
+                Applicants = exam.Enrollments?.Select(en => new ExamApplicantResponseDto
+                {
+                    ExamEnrollmentId = en.ExamEnrollmentId,
+                    ApplicantId = en.ApplicantId,
+                    Name = en.Applicant?.FullName,
+                    Email = en.Applicant?.Email,
+                    Status = en.Status.ToString(),
+                    Score = en.Score,
+                }).ToList() ?? new List<ExamApplicantResponseDto>(),
+            }).ToList();
+
+            return Ok(result);
+        }
+
+        private static string MapQuestionType(QuestionType type) => type switch
+        {
+            QuestionType.MultipleChoice => "mcq",
+            QuestionType.Checkbox => "checkbox",
+            QuestionType.TrueFalse => "truefalse",
+            QuestionType.Essay => "essay",
+            _ => "mcq",
+        };
+
+        private static string ComputeExamStatus(DateOnly examDate, TimeOnly startTime, int durationMinutes, DateTime nowPh)
+        {
+            var examStart = examDate.ToDateTime(startTime);
+            var examEnd = examStart.AddMinutes(durationMinutes);
+            if (nowPh < examStart) return "Upcoming";
+            if (nowPh <= examEnd) return "Active";
+            return "Completed";
         }
     }
 }

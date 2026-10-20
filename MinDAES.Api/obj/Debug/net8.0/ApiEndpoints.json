@@ -1,0 +1,38 @@
+[
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ExamController",
+    "Method": "AddNewExamSchedules",
+    "RelativePath": "api/Exam/AddNewExamSchedules",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "data",
+        "Type": "MinDAES.Api.Domain.DTOs.ExamDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ExamController",
+    "Method": "GetExamSchedules",
+    "RelativePath": "api/Exam/GetExamSchedules",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": [
+      {
+        "Type": "System.Collections.Generic.List\u00601[[MinDAES.Api.Domain.DTOs.ExamScheduleResponseDto, MinDAES.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "MediaTypes": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "StatusCode": 200
+      }
+    ]
+  }
+]
