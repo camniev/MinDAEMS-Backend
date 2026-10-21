@@ -34,5 +34,26 @@
         "StatusCode": 200
       }
     ]
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.QuestionController",
+    "Method": "SaveExamQuestions",
+    "RelativePath": "api/Question/{examId}/SaveQuestions",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "data",
+        "Type": "MinDAES.Api.Domain.DTOs.SaveExamQuestionsDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
   }
 ]
