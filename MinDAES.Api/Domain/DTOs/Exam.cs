@@ -57,6 +57,7 @@ namespace MinDAES.Api.Domain.DTOs
         public Guid ExamEnrollmentId { get; set; }
         public Guid ApplicantId { get; set; }
         public string Name { get; set; }
+        public string ApplicantCode { get; set; }
         public string Email { get; set; }
         public string Status { get; set; }
         public decimal? Score { get; set; }

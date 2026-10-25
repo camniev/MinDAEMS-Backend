@@ -108,13 +108,14 @@ namespace MinDAES.Api.Controllers
                     }).ToList() ?? new List<ExamQuestionOptionResponseDto>(),
                 }).ToList() ?? new List<ExamQuestionResponseDto>(),
 
-                // Empty list until anyone's been enrolled — exam.Enrollments is just
+                // Empty list until anyone's been enrolled ï¿½ exam.Enrollments is just
                 // an empty collection for a freshly created exam, nothing special needed.
                 Applicants = exam.Enrollments?.Select(en => new ExamApplicantResponseDto
                 {
                     ExamEnrollmentId = en.ExamEnrollmentId,
                     ApplicantId = en.ApplicantId,
                     Name = en.Applicant?.FullName,
+                    ApplicantCode = en.Applicant?.ApplicantCode,
                     Email = en.Applicant?.Email,
                     Status = en.Status.ToString(),
                     Score = en.Score,

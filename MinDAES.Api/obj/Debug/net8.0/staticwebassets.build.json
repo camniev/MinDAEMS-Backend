@@ -1,1 +1,11 @@
-{"Version":1,"Hash":"SLJmO/GQZ8xRU3lr5Tw0lLuNuXMJIa+VdXFpbKaHz08=","Source":"MinDAES.Api","BasePath":"_content/MinDAES.Api","Mode":"Default","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}
+{
+  "Version": 1,
+  "Hash": "Dz/IzTuzySse+ZeL4isLBZ48/1ZNqLg4uRXFqX31LN8=",
+  "Source": "MinDAES.Api",
+  "BasePath": "_content/MinDAES.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
