@@ -62,4 +62,9 @@ namespace MinDAES.Api.Domain.DTOs
         public string Status { get; set; }
         public decimal? Score { get; set; }
     }
+
+    public class ArchiveExamDto
+    {
+        public Guid? UserId { get; set; }
+    }
 }

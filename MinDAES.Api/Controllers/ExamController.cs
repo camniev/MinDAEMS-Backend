@@ -67,12 +67,16 @@ namespace MinDAES.Api.Controllers
         }
 
         [HttpGet("GetExamSchedules")]
-        public async Task<ActionResult<List<ExamScheduleResponseDto>>> GetExamSchedules()
+        public async Task<ActionResult<List<ExamScheduleResponseDto>>> GetExamSchedules(
+            [FromQuery] bool includeArchived = false)
         {
             var now = TimeHelper.GetPhilippineTime();
-
-            var exams = await _mindaEsDbContext.Exams
-                .AsNoTracking()
+        
+            var query = _mindaEsDbContext.Exams.AsNoTracking();
+            if (!includeArchived)
+                query = query.Where(e => !e.IsArchived);
+        
+            var exams = await query
                 .Include(e => e.Questions)
                     .ThenInclude(q => q.Options)
                 .Include(e => e.Enrollments)
@@ -80,7 +84,7 @@ namespace MinDAES.Api.Controllers
                 .OrderByDescending(e => e.ExamDate)
                     .ThenByDescending(e => e.StartTime)
                 .ToListAsync();
-
+        
             var result = exams.Select(exam => new ExamScheduleResponseDto
             {
                 ExamId = exam.ExamId,
@@ -92,8 +96,8 @@ namespace MinDAES.Api.Controllers
                 Instructions = exam.Instructions,
                 AccessType = exam.AccessType == ExamAccessType.Private ? "Private" : "Public",
                 ExamCode = exam.ExamCode,
-                Status = ComputeExamStatus(exam.ExamDate, exam.StartTime, exam.DurationMinutes, now),
-
+                Status = ComputeExamStatus(exam.IsArchived, exam.ExamDate, exam.StartTime, exam.DurationMinutes, now),
+        
                 Questions = exam.Questions?.Select(q => new ExamQuestionResponseDto
                 {
                     Id = q.QuestionId,
@@ -107,21 +111,19 @@ namespace MinDAES.Api.Controllers
                         IsCorrect = o.IsCorrect,
                     }).ToList() ?? new List<ExamQuestionOptionResponseDto>(),
                 }).ToList() ?? new List<ExamQuestionResponseDto>(),
-
-                // Empty list until anyone's been enrolled � exam.Enrollments is just
-                // an empty collection for a freshly created exam, nothing special needed.
+        
                 Applicants = exam.Enrollments?.Select(en => new ExamApplicantResponseDto
                 {
                     ExamEnrollmentId = en.ExamEnrollmentId,
                     ApplicantId = en.ApplicantId,
                     Name = en.Applicant?.FullName,
-                    ApplicantCode = en.ApplicantCode,
                     Email = en.Applicant?.Email,
+                    ApplicantCode = en.ApplicantCode, // now read from the enrollment, not the applicant
                     Status = en.Status.ToString(),
                     Score = en.Score,
                 }).ToList() ?? new List<ExamApplicantResponseDto>(),
             }).ToList();
-
+        
             return Ok(result);
         }
 
@@ -134,26 +136,77 @@ namespace MinDAES.Api.Controllers
             _ => "mcq",
         };
 
-        private static string ComputeExamStatus(DateOnly examDate, TimeOnly startTime, int durationMinutes, DateTime nowPh)
+        private static string ComputeExamStatus(
+            bool isArchived, DateOnly examDate, TimeOnly startTime, int durationMinutes, DateTime nowPh)
         {
+            if (isArchived) return "Archived";
+        
             var examStart = examDate.ToDateTime(startTime);
             var examEnd = examStart.AddMinutes(durationMinutes);
             if (nowPh < examStart) return "Upcoming";
-            if (nowPh <= examEnd) return "Active";
-            return "Completed";
+            if (nowPh <= examEnd) return "Ongoing";
+            return "Closed";
         }
 
-        // archive exams
-        //[HttpPut("ArchiveExams/{exam_id}")]
-        //public async Task<ActionResult> ArchiveExams(Guid exam_id)
-        //{
-        //    var exam = await _mindaEsDbContext.Exams
-        //        .FirstOrDefaultAsync(e => e.ExamId == exam_id);
-
-        //    if (exam == null)
-        //        return NotFound(new { message = "Exam schedule not found." });
-
-        //    await using var transaction = 
-        //}
+        // ---- Archive ----
+        [HttpPatch("{examId:guid}/Archive")]
+        public async Task<ActionResult> ArchiveExamSchedule(Guid examId, [FromBody] ArchiveExamDto data)
+        {
+            var exam = await _mindaEsDbContext.Exams.FirstOrDefaultAsync(e => e.ExamId == examId);
+            if (exam == null)
+                return NotFound(new { message = "Exam schedule not found." });
+        
+            if (exam.IsArchived)
+                return Ok(new { message = "Exam schedule is already archived." });
+        
+            await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                exam.IsArchived = true;
+                exam.ArchivedAt = TimeHelper.GetPhilippineTime();
+                exam.ArchivedByUserId = data?.UserId;
+        
+                await _mindaEsDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+        
+                return Ok(new { message = "Exam schedule archived." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Error archiving exam schedule", error = ex.Message });
+            }
+        }
+        
+        // ---- Restore ----
+        
+        [HttpPatch("{examId:guid}/Restore")]
+        public async Task<ActionResult> RestoreExamSchedule(Guid examId)
+        {
+            var exam = await _mindaEsDbContext.Exams.FirstOrDefaultAsync(e => e.ExamId == examId);
+            if (exam == null)
+                return NotFound(new { message = "Exam schedule not found." });
+        
+            if (!exam.IsArchived)
+                return Ok(new { message = "Exam schedule is not archived." });
+        
+            await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                exam.IsArchived = false;
+                exam.ArchivedAt = null;
+                exam.ArchivedByUserId = null;
+        
+                await _mindaEsDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+        
+                return Ok(new { message = "Exam schedule restored." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Error restoring exam schedule", error = ex.Message });
+            }
+        }
     }
 }
