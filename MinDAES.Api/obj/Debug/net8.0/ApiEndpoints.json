@@ -1,5 +1,47 @@
 [
   {
+    "ContainingType": "MinDAES.Api.Controllers.ApplicantController",
+    "Method": "EnrollApplicants",
+    "RelativePath": "api/Applicant/{examId}/EnrollApplicants",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "data",
+        "Type": "MinDAES.Api.Domain.DTOs.EnrollApplicantsDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ApplicantController",
+    "Method": "RemoveEnrollment",
+    "RelativePath": "api/Applicant/{examId}/Enrollments/{enrollmentId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "enrollmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "MinDAES.Api.Controllers.ExamController",
     "Method": "AddNewExamSchedules",
     "RelativePath": "api/Exam/AddNewExamSchedules",

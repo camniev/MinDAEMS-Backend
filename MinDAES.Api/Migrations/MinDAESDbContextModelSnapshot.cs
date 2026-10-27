@@ -84,11 +84,6 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("ApplicantId");
 
-                    b.Property<string>("ApplicantCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("ApplicantCode");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("CreatedAt");
@@ -150,6 +145,14 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("int")
                         .HasColumnName("AccessType");
 
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("ArchivedAt");
+
+                    b.Property<Guid?>("ArchivedByUserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("ArchivedByUserId");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("CreatedAt");
@@ -183,6 +186,10 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("nvarchar(4000)")
                         .HasColumnName("Instructions");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit")
+                        .HasColumnName("IsArchived");
+
                     b.Property<int>("PassingScore")
                         .HasColumnType("int")
                         .HasColumnName("PassingScore");
@@ -212,6 +219,11 @@ namespace MinDAES.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("ExamEnrollmentId");
+
+                    b.Property<string>("ApplicantCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("ApplicantCode");
 
                     b.Property<Guid>("ApplicantId")
                         .HasColumnType("uniqueidentifier")

@@ -55,6 +55,15 @@ namespace MinDAES.Api.Domain.Entities
         [Column("UpdatedAt")]
         public DateTime? UpdatedAt { get; set; }
 
+        [Column("IsArchived")]
+        public bool IsArchived { get; set; } = false;
+
+        [Column("ArchivedAt")]
+        public DateTime? ArchivedAt { get; set; }
+
+        [Column("ArchivedByUserId")]
+        public Guid? ArchivedByUserId { get; set; }
+
         public ICollection<Question> Questions { get; set; } = new List<Question>();
         public ICollection<ExamEnrollment> Enrollments { get; set; } = new List<ExamEnrollment>();
     }

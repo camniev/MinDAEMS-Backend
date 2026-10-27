@@ -25,6 +25,9 @@ namespace MinDAES.Api.Domain.Entities
         public Guid ApplicantId { get; set; }
         public Applicant? Applicant { get; set; }
 
+        [Column("ApplicantCode")]
+        public string ApplicantCode { get; set; } = string.Empty;
+
         [Required]
         [Column("Status")]
         public EnrollmentStatus Status { get; set; } = EnrollmentStatus.Invited;

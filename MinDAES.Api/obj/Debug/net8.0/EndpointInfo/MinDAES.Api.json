@@ -5,6 +5,80 @@
     "version": "1.0"
   },
   "paths": {
+    "/api/Applicant/{examId}/EnrollApplicants": {
+      "post": {
+        "tags": [
+          "Applicant"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollApplicantsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollApplicantsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollApplicantsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Applicant/{examId}/Enrollments/{enrollmentId}": {
+      "delete": {
+        "tags": [
+          "Applicant"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Exam/AddNewExamSchedules": {
       "post": {
         "tags": [
@@ -119,6 +193,47 @@
   },
   "components": {
     "schemas": {
+      "ApplicantEnrollmentDto": {
+        "required": [
+          "email",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string",
+            "format": "email"
+          },
+          "applicantCode": {
+            "maxLength": 50,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EnrollApplicantsDto": {
+        "required": [
+          "applicants"
+        ],
+        "type": "object",
+        "properties": {
+          "applicants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicantEnrollmentDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "ExamApplicantResponseDto": {
         "type": "object",
         "properties": {
@@ -131,6 +246,10 @@
             "format": "uuid"
           },
           "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "applicantCode": {
             "type": "string",
             "nullable": true
           },

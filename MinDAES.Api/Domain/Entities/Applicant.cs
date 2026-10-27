@@ -18,9 +18,6 @@ namespace MinDAES.Api.Domain.Entities
         [Column("Email")]
         public string Email { get; set; } = string.Empty;
 
-        [Column("ApplicantCode")]
-        public string ApplicantCode { get; set; } = string.Empty;
-
         [Column("CreatedAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

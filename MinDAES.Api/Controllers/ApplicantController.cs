@@ -39,10 +39,6 @@ namespace MinDAES.Api.Controllers
             await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
             try
             {
-                // De-dupe the incoming batch by email first. The frontend's bulk
-                // import already does this, but a single-entry call (or any future
-                // caller) might not, and two entries for the same email in one
-                // request would otherwise race against each other below.
                 var incoming = data.Applicants
                     .Select(a => new
                     {
@@ -60,7 +56,9 @@ namespace MinDAES.Api.Controllers
                 // One query for every matching existing applicant, keyed by email
                 // for in-memory lookup — applicants are a directory independent of
                 // any one exam, so someone enrolled elsewhere should be reused, not
-                // duplicated.
+                // duplicated. Note: ApplicantCode is intentionally NOT read from or
+                // written to this record anymore — it's not a property of the
+                // person, it's a property of this specific application.
                 var existingApplicants = await _mindaEsDbContext.Applicants
                     .Where(a => emailKeys.Contains(a.Email.ToLower()))
                     .ToListAsync();
@@ -68,7 +66,10 @@ namespace MinDAES.Api.Controllers
                     .ToDictionary(a => a.Email.ToLowerInvariant(), a => a);
 
                 // Applicants already on THIS exam's roster, so re-importing the same
-                // person is a no-op rather than a duplicate enrollment row.
+                // person for the same exam is a no-op rather than a duplicate
+                // enrollment row. This check is already scoped to `examId`, so a
+                // second enrollment for a DIFFERENT exam was never blocked — the
+                // bug was purely that its ApplicantCode had nowhere correct to land.
                 var existingApplicantIds = existingApplicants.Select(a => a.ApplicantId).ToList();
                 var alreadyEnrolledIds = (await _mindaEsDbContext.ExamEnrollments
                         .Where(en => en.ExamId == examId && existingApplicantIds.Contains(en.ApplicantId))
@@ -88,7 +89,9 @@ namespace MinDAES.Api.Controllers
                             ApplicantId = Guid.NewGuid(),
                             FullName = entry.Name,
                             Email = entry.Email,
-                            ApplicantCode = entry.ApplicantCode,
+                            // ApplicantCode removed from here — it now lives on the
+                            // ExamEnrollment created below, since it's specific to
+                            // this application, not to the person.
                             CreatedAt = TimeHelper.GetPhilippineTime(),
                         };
                         _mindaEsDbContext.Applicants.Add(applicant);
@@ -108,6 +111,10 @@ namespace MinDAES.Api.Controllers
                         ExamEnrollmentId = Guid.NewGuid(),
                         ExamId = examId,
                         ApplicantId = applicant.ApplicantId,
+                        // This is the actual fix: every enrollment gets its own
+                        // code, regardless of whether the Applicant record itself
+                        // was just created or already existed from a prior exam.
+                        ApplicantCode = entry.ApplicantCode,
                         Status = EnrollmentStatus.Invited,
                         InvitedAt = TimeHelper.GetPhilippineTime(),
                     });

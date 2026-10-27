@@ -24,7 +24,7 @@ namespace MinDAES.Api.Controllers
         public async Task<ActionResult> AddNewExamSchedules([FromBody] ExamDto data)
         {
             if (data == null)
-                return BadRequest(new { message = "Request header is required."});
+                return BadRequest(new { message = "Request header is required." });
 
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -53,7 +53,7 @@ namespace MinDAES.Api.Controllers
                 _mindaEsDbContext.Exams.Add(exam);
                 await _mindaEsDbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return Ok(new { message = "New exam schedule added successfully."});
+                return Ok(new { message = "New exam schedule added successfully." });
             }
             catch (Exception ex)
             {
@@ -115,7 +115,7 @@ namespace MinDAES.Api.Controllers
                     ExamEnrollmentId = en.ExamEnrollmentId,
                     ApplicantId = en.ApplicantId,
                     Name = en.Applicant?.FullName,
-                    ApplicantCode = en.Applicant?.ApplicantCode,
+                    ApplicantCode = en.ApplicantCode,
                     Email = en.Applicant?.Email,
                     Status = en.Status.ToString(),
                     Score = en.Score,
@@ -142,5 +142,18 @@ namespace MinDAES.Api.Controllers
             if (nowPh <= examEnd) return "Active";
             return "Completed";
         }
+
+        // archive exams
+        //[HttpPut("ArchiveExams/{exam_id}")]
+        //public async Task<ActionResult> ArchiveExams(Guid exam_id)
+        //{
+        //    var exam = await _mindaEsDbContext.Exams
+        //        .FirstOrDefaultAsync(e => e.ExamId == exam_id);
+
+        //    if (exam == null)
+        //        return NotFound(new { message = "Exam schedule not found." });
+
+        //    await using var transaction = 
+        //}
     }
 }
