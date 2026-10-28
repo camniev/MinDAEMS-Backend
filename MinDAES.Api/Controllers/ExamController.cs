@@ -6,6 +6,7 @@ using MinDAES.Api.Domain.Entities;
 using MinDAES.Api.Domain.Enums;
 using MinDAES.Api.Helpers;
 using System.Linq.Expressions;
+using System.Text.Json;
 
 namespace MinDAES.Api.Controllers
 {
@@ -96,7 +97,7 @@ namespace MinDAES.Api.Controllers
                 Instructions = exam.Instructions,
                 AccessType = exam.AccessType == ExamAccessType.Private ? "Private" : "Public",
                 ExamCode = exam.ExamCode,
-                Status = ComputeExamStatus(exam.IsArchived, exam.ExamDate, exam.StartTime, exam.DurationMinutes, now),
+                Status = exam.Status.ToString(),
         
                 Questions = exam.Questions?.Select(q => new ExamQuestionResponseDto
                 {
@@ -127,6 +128,64 @@ namespace MinDAES.Api.Controllers
             return Ok(result);
         }
 
+        [HttpPatch("{examId:guid}/Open")]
+        public async Task<ActionResult> OpenExamSchedule(Guid examId)
+        {
+            var exam = await _mindaEsDbContext.Exams.FirstOrDefaultAsync(e => e.ExamId == examId);
+            if (exam == null)
+                return NotFound(new { message = "Exam schedule not found." });
+
+            if (exam.IsArchived)
+                return Conflict(new { message = "Cannot open an archived exam schedule. Restore it first." });
+
+            if (exam.Status != ExamStatus.Upcoming)
+                return Conflict(new { message = $"Cannot open an exam schedule that is already {exam.Status}." });
+
+            await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                exam.Status = ExamStatus.Ongoing;
+                await _mindaEsDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Exam schedule opened." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Error opening exam schedule", error = ex.Message });
+            }
+        }
+
+        // ---- Close ----
+
+        [HttpPatch("{examId:guid}/Close")]
+        public async Task<ActionResult> CloseExamSchedule(Guid examId)
+        {
+            var exam = await _mindaEsDbContext.Exams.FirstOrDefaultAsync(e => e.ExamId == examId);
+            if (exam == null)
+                return NotFound(new { message = "Exam schedule not found." });
+
+            if (exam.IsArchived)
+                return Conflict(new { message = "Cannot close an archived exam schedule." });
+
+            if (exam.Status != ExamStatus.Ongoing)
+                return Conflict(new { message = $"Cannot close an exam schedule that is {exam.Status}, not Ongoing." });
+
+            await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                exam.Status = ExamStatus.Closed;
+                await _mindaEsDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Exam schedule closed." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Error closing exam schedule", error = ex.Message });
+            }
+        }
+
         private static string MapQuestionType(QuestionType type) => type switch
         {
             QuestionType.MultipleChoice => "mcq",
@@ -136,17 +195,17 @@ namespace MinDAES.Api.Controllers
             _ => "mcq",
         };
 
-        private static string ComputeExamStatus(
-            bool isArchived, DateOnly examDate, TimeOnly startTime, int durationMinutes, DateTime nowPh)
-        {
-            if (isArchived) return "Archived";
+        // private static string ComputeExamStatus(
+        //     bool isArchived, DateOnly examDate, TimeOnly startTime, int durationMinutes, DateTime nowPh)
+        // {
+        //     if (isArchived) return "Archived";
         
-            var examStart = examDate.ToDateTime(startTime);
-            var examEnd = examStart.AddMinutes(durationMinutes);
-            if (nowPh < examStart) return "Upcoming";
-            if (nowPh <= examEnd) return "Ongoing";
-            return "Closed";
-        }
+        //     var examStart = examDate.ToDateTime(startTime);
+        //     var examEnd = examStart.AddMinutes(durationMinutes);
+        //     if (nowPh < examStart) return "Upcoming";
+        //     if (nowPh <= examEnd) return "Ongoing";
+        //     return "Closed";
+        // }
 
         // ---- Archive ----
         [HttpPatch("{examId:guid}/Archive")]
