@@ -173,5 +173,49 @@ namespace MinDAES.Api.Controllers
                 return StatusCode(500, new { message = "Error removing applicant from roster", error = ex.Message });
             }
         }
+
+        [HttpGet("MySchedules")]
+        public async Task<ActionResult<List<ApplicantExamScheduleResponseDto>>> GetMySchedules(
+            [FromQuery] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest(new { message = "Email is required." });
+        
+            var now = TimeHelper.GetPhilippineTime();
+            var emailKey = email.Trim().ToLowerInvariant();
+        
+            // Pull this applicant's enrollments (across any exam) along with the
+            // Exam each one belongs to, so status can be computed per exam.
+            var enrollments = await _mindaEsDbContext.ExamEnrollments
+                .AsNoTracking()
+                .Include(en => en.Exam)
+                .Include(en => en.Applicant)
+                .Where(en => en.Applicant != null && en.Applicant.Email.ToLower() == emailKey)
+                .Where(en => en.Exam != null && !en.Exam.IsArchived)
+                .ToListAsync();
+        
+            var result = enrollments
+                .Select(en => new { en, status = ExamStatusHelper.ComputeDisplayStatus(en.Exam!, now) })
+                // Per the spec: applicants only see exams that are currently Ongoing.
+                .Where(x => x.status == "Ongoing")
+                .Select(x => new ApplicantExamScheduleResponseDto
+                {
+                    ExamId = x.en.ExamId,
+                    ExamEnrollmentId = x.en.ExamEnrollmentId,
+                    ExamTitle = x.en.Exam!.ExamTitle,
+                    ExamDate = x.en.Exam.ExamDate,
+                    StartTime = x.en.Exam.StartTime,
+                    DurationMinutes = x.en.Exam.DurationMinutes,
+                    Instructions = x.en.Exam.Instructions,
+                    Status = x.status,
+                    EnrollmentStatus = x.en.Status.ToString(),
+                    Score = x.en.Score,
+                })
+                .OrderBy(e => e.ExamDate)
+                    .ThenBy(e => e.StartTime)
+                .ToList();
+        
+            return Ok(result);
+        }
     }
 }
