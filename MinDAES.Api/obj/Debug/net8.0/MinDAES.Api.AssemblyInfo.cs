@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MinDAES.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0191b92fa818665d7df97b75309d9a73e0d2b11e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bde87b77d72dde92e0819e5a6ec6e1c4a4ccdaf4")]
 [assembly: System.Reflection.AssemblyProductAttribute("MinDAES.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MinDAES.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
