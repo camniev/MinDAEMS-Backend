@@ -217,5 +217,266 @@ namespace MinDAES.Api.Controllers
         
             return Ok(result);
         }
+
+        // ---- Paste these members inside ApplicantController ----
+        // Identity is the same temporary email check as MySchedules: every call must
+        // name an email that owns the enrollment. Not real authentication.
+
+        // POST api/Applicant/MyExam/{enrollmentId}/Start
+        // Begins the attempt (records StartedAt the first time), or resumes it if
+        // already started — calling it again never restarts the clock.
+        [HttpPost("MyExam/{enrollmentId:guid}/Start")]
+        public async Task<ActionResult<ExamSessionResponseDto>> StartMyExam(
+            Guid enrollmentId, [FromBody] StartExamDto data)
+        {
+            if (data == null)
+                return BadRequest(new { message = "Request body is required." });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var en = await FindOwnedEnrollmentAsync(enrollmentId, data.Email);
+            if (en?.Exam == null)
+                return NotFound(new { message = "Exam enrollment not found." });
+
+            var exam = en.Exam;
+            var now = TimeHelper.GetPhilippineTime();
+
+            if (en.Status == EnrollmentStatus.Disqualified)
+                return Conflict(new { message = "You have been disqualified from this exam." });
+            if (en.SubmittedAt != null || en.Status == EnrollmentStatus.Completed)
+                return Conflict(new { message = "This exam has already been submitted." });
+
+            if (en.StartedAt == null)
+            {
+                // First start: the exam has to be open right now.
+                if (ExamStatusHelper.ComputeDisplayStatus(exam, now) != "Ongoing")
+                    return Conflict(new { message = "This exam isn't open." });
+
+                en.StartedAt = now;
+                await _mindaEsDbContext.SaveChangesAsync();
+            }
+            else
+            {
+                // Resuming: only continue if the attempt is still live.
+                var over = await RejectIfAttemptOverAsync(en, now, graceSeconds: 0);
+                if (over != null) return over;
+            }
+
+            var saved = await _mindaEsDbContext.Answers
+                .AsNoTracking()
+                .Include(a => a.SelectedOptions)
+                .Where(a => a.ExamEnrollmentId == en.ExamEnrollmentId)
+                .ToListAsync();
+
+            return Ok(new ExamSessionResponseDto
+            {
+                ExamEnrollmentId = en.ExamEnrollmentId,
+                ExamTitle = exam.ExamTitle,
+                DurationMinutes = exam.DurationMinutes,
+                SecondsRemaining = ExamAttemptRules.SecondsRemaining(en.StartedAt!.Value, exam.DurationMinutes, now),
+                Questions = exam.Questions
+                    .OrderBy(q => q.OrderIndex)
+                    .Select(q => new ApplicantQuestionDto
+                    {
+                        Id = q.QuestionId,
+                        Type = ExamAttemptRules.ToClientType(q.Type),
+                        Text = q.Text,
+                        Points = q.Points,
+                        Required = q.IsRequired,
+                        Options = q.Options
+                            .OrderBy(o => o.OrderIndex)
+                            .Select(o => new ApplicantOptionDto { Id = o.QuestionOptionId, Text = o.Text })
+                            .ToList(),
+                    })
+                    .ToList(),
+                Answers = saved
+                    .Select(a => new SavedAnswerDto
+                    {
+                        QuestionId = a.QuestionId,
+                        SelectedOptionIds = a.SelectedOptions.Select(o => o.QuestionOptionId).ToList(),
+                        EssayText = a.EssayText,
+                    })
+                    .ToList(),
+            });
+        }
+
+        // PUT api/Applicant/MyExam/{enrollmentId}/Answers
+        // Autosave. Replaces the applicant's whole saved answer set with what's sent,
+        // so a question that was cleared on screen is cleared here too.
+        [HttpPut("MyExam/{enrollmentId:guid}/Answers")]
+        public async Task<ActionResult> SaveMyExamAnswers(
+            Guid enrollmentId, [FromBody] ExamAnswersDto data)
+        {
+            if (data == null)
+                return BadRequest(new { message = "Request body is required." });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var en = await FindOwnedEnrollmentAsync(enrollmentId, data.Email);
+            if (en?.Exam == null)
+                return NotFound(new { message = "Exam enrollment not found." });
+
+            var now = TimeHelper.GetPhilippineTime();
+            var over = await RejectIfAttemptOverAsync(en, now, ExamAttemptRules.SubmissionGraceSeconds);
+            if (over != null) return over;
+
+            var error = ExamAttemptRules.Validate(en.Exam.Questions, data.Answers);
+            if (error != null)
+                return BadRequest(new { message = error });
+
+            await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                await ReplaceAnswersAsync(en, data.Answers);
+                await transaction.CommitAsync();
+                return Ok(new { savedAt = now });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Error saving answers", error = ex.Message });
+            }
+        }
+
+        // POST api/Applicant/MyExam/{enrollmentId}/Submit
+        // Saves the final answers and closes the attempt in one transaction.
+        // Required-question checks are the UI's job: the server can't refuse a
+        // submit when time has run out.
+        [HttpPost("MyExam/{enrollmentId:guid}/Submit")]
+        public async Task<ActionResult> SubmitMyExam(
+            Guid enrollmentId, [FromBody] ExamAnswersDto data)
+        {
+            if (data == null)
+                return BadRequest(new { message = "Request body is required." });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var en = await FindOwnedEnrollmentAsync(enrollmentId, data.Email);
+            if (en?.Exam == null)
+                return NotFound(new { message = "Exam enrollment not found." });
+
+            var now = TimeHelper.GetPhilippineTime();
+            var over = await RejectIfAttemptOverAsync(en, now, ExamAttemptRules.SubmissionGraceSeconds);
+            if (over != null) return over;
+
+            var error = ExamAttemptRules.Validate(en.Exam.Questions, data.Answers);
+            if (error != null)
+                return BadRequest(new { message = error });
+
+            await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+            try
+            {
+                await ReplaceAnswersAsync(en, data.Answers);
+                en.SubmittedAt = now;
+                en.Status = EnrollmentStatus.Completed;
+                await _mindaEsDbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { message = "Your exam has been submitted." });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Error submitting exam", error = ex.Message });
+            }
+        }
+
+        // ---- helpers ----
+
+        // Loads the enrollment only if it belongs to this email, with everything the
+        // rules need (exam, its questions and options).
+        private async Task<ExamEnrollment?> FindOwnedEnrollmentAsync(Guid enrollmentId, string email)
+        {
+            var key = email.Trim().ToLowerInvariant();
+            return await _mindaEsDbContext.ExamEnrollments
+                .Include(en => en.Exam)
+                    .ThenInclude(e => e!.Questions)
+                        .ThenInclude(q => q.Options)
+                .Include(en => en.Applicant)
+                .FirstOrDefaultAsync(en =>
+                    en.ExamEnrollmentId == enrollmentId &&
+                    en.Applicant != null &&
+                    en.Applicant.Email.ToLower() == key);
+        }
+
+        // Returns a response to send back if this attempt can't accept more answers
+        // (null = fine to continue). If time ran out or HR closed/archived the exam,
+        // the attempt is finalized with whatever was autosaved, so it doesn't sit
+        // "in progress" forever. This happens lazily, the next time the applicant's
+        // browser touches the attempt — there's no background job.
+        private async Task<ActionResult?> RejectIfAttemptOverAsync(
+            ExamEnrollment en, DateTime now, int graceSeconds)
+        {
+            var exam = en.Exam!;
+
+            if (en.SubmittedAt != null)
+                return Conflict(new { message = "This exam has already been submitted." });
+            if (en.StartedAt == null)
+                return Conflict(new { message = "This exam hasn't been started." });
+
+            if (ExamAttemptRules.IsPastDeadline(en.StartedAt.Value, exam.DurationMinutes, now, graceSeconds))
+            {
+                await FinalizeAttemptAsync(en, ExamAttemptRules.Deadline(en.StartedAt.Value, exam.DurationMinutes));
+                return StatusCode(StatusCodes.Status410Gone,
+                    new { message = "Time is up. Your saved answers have been submitted." });
+            }
+
+            // Deliberately checks the STORED status, not the display status: the
+            // display status auto-closes at the scheduled end, which would cut off
+            // someone who started late and still has their own time left. Only an
+            // explicit Close or Archive by HR ends a running attempt early.
+            if (exam.IsArchived || exam.Status == ExamStatus.Closed)
+            {
+                await FinalizeAttemptAsync(en, now);
+                return StatusCode(StatusCodes.Status410Gone,
+                    new { message = "This exam was closed. Your saved answers have been submitted." });
+            }
+
+            return null;
+        }
+
+        private async Task FinalizeAttemptAsync(ExamEnrollment en, DateTime submittedAt)
+        {
+            en.SubmittedAt = submittedAt;
+            en.Status = EnrollmentStatus.Completed;
+            await _mindaEsDbContext.SaveChangesAsync();
+        }
+
+        // Replace-all, like SaveQuestions. Deletes are saved before the inserts so a
+        // unique (enrollment, question) index can't trip over a row that's being
+        // removed and re-added in the same save. Runs inside the caller's transaction.
+        //
+        // ASSUMPTION: Answer has AnswerId, ExamEnrollmentId, QuestionId, EssayText and
+        // SelectedOptions; AnswerOption has AnswerOptionId and QuestionOptionId; and
+        // the DbContext exposes them as Answers / AnswerOptions. Adjust names to your
+        // actual entities.
+        private async Task ReplaceAnswersAsync(ExamEnrollment en, IEnumerable<SavedAnswerDto> answers)
+        {
+            var existing = await _mindaEsDbContext.Answers
+                .Include(a => a.SelectedOptions)
+                .Where(a => a.ExamEnrollmentId == en.ExamEnrollmentId)
+                .ToListAsync();
+            _mindaEsDbContext.Answers.RemoveRange(existing);
+            await _mindaEsDbContext.SaveChangesAsync();
+
+            foreach (var a in answers.Where(ExamAttemptRules.IsAnswered))
+            {
+                _mindaEsDbContext.Answers.Add(new Answer
+                {
+                    AnswerId = Guid.NewGuid(),
+                    ExamEnrollmentId = en.ExamEnrollmentId,
+                    QuestionId = a.QuestionId,
+                    EssayText = string.IsNullOrWhiteSpace(a.EssayText) ? null : a.EssayText,
+                    SelectedOptions = (a.SelectedOptionIds ?? new List<Guid>())
+                        .Distinct()
+                        .Select(id => new AnswerOption
+                        {
+                            AnswerOptionId = Guid.NewGuid(),
+                            QuestionOptionId = id,
+                        })
+                        .ToList(),
+                });
+            }
+            await _mindaEsDbContext.SaveChangesAsync();
+        }
     }
 }

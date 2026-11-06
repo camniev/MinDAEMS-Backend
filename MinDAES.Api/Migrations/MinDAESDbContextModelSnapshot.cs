@@ -56,7 +56,7 @@ namespace MinDAES.Api.Migrations
 
             modelBuilder.Entity("MinDAES.Api.Domain.Entities.AnswerOption", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<Guid>("AnswerOptionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
@@ -68,7 +68,7 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("QuestionOptionId");
 
-                    b.HasKey("Id");
+                    b.HasKey("AnswerOptionId");
 
                     b.HasIndex("AnswerId");
 

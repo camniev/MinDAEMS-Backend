@@ -39,7 +39,7 @@ namespace MinDAES.Api.Domain.Entities
         [Key]
         [Required]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid AnswerOptionId { get; set; } = Guid.NewGuid();
 
         [Required]
         [Column("AnswerId")]
