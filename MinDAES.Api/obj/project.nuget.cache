@@ -1,12 +1,15 @@
 {
   "version": 2,
-  "dgSpecHash": "8Ju2ruZOz/4=",
+  "dgSpecHash": "smdzZCNjJWk=",
   "success": true,
   "projectFilePath": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/MinDAES.Api.csproj",
   "expectedPackageFiles": [
+    "/Users/cameronnieve/.nuget/packages/anglesharp/1.9.1/anglesharp.1.9.1.nupkg.sha512",
+    "/Users/cameronnieve/.nuget/packages/anglesharp.css/1.3.2/anglesharp.css.1.3.2.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/azure.core/1.25.0/azure.core.1.25.0.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/azure.identity/1.7.0/azure.identity.1.7.0.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/bcrypt.net-next/4.2.0/bcrypt.net-next.4.2.0.nupkg.sha512",
+    "/Users/cameronnieve/.nuget/packages/htmlsanitizer/11.0.16/htmlsanitizer.11.0.16.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/7.0.11/microsoft.aspnetcore.authentication.jwtbearer.7.0.11.nupkg.sha512",
     "/Users/cameronnieve/.nuget/packages/microsoft.bcl.asyncinterfaces/6.0.0/microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",

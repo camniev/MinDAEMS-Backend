@@ -280,3 +280,6 @@ C:/Users/cbnieve/Documents/Actual Projects/MinDAES/MinDAES.Api/MinDAES.Api/obj/D
 C:/Users/cbnieve/Documents/Actual Projects/MinDAES/MinDAES.Api/MinDAES.Api/obj/Debug/net8.0/MinDAES.Api.genruntimeconfig.cache
 C:/Users/cbnieve/Documents/Actual Projects/MinDAES/MinDAES.Api/MinDAES.Api/obj/Debug/net8.0/ref/MinDAES.Api.dll
 /Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/BCrypt-Net-Next.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/AngleSharp.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/AngleSharp.Css.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/HtmlSanitizer.dll

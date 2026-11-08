@@ -320,6 +320,9 @@ namespace MinDAES.Api.Controllers
             var over = await RejectIfAttemptOverAsync(en, now, ExamAttemptRules.SubmissionGraceSeconds);
             if (over != null) return over;
 
+            var essayError = SanitizeEssays(data);
+            if (essayError != null) return BadRequest(new { message = essayError });
+
             var error = ExamAttemptRules.Validate(en.Exam.Questions, data.Answers);
             if (error != null)
                 return BadRequest(new { message = error });
@@ -358,6 +361,9 @@ namespace MinDAES.Api.Controllers
             var now = TimeHelper.GetPhilippineTime();
             var over = await RejectIfAttemptOverAsync(en, now, ExamAttemptRules.SubmissionGraceSeconds);
             if (over != null) return over;
+
+            var essayError = SanitizeEssays(data);
+            if (essayError != null) return BadRequest(new { message = essayError });
 
             var error = ExamAttemptRules.Validate(en.Exam.Questions, data.Answers);
             if (error != null)
@@ -477,6 +483,17 @@ namespace MinDAES.Api.Controllers
                 });
             }
             await _mindaEsDbContext.SaveChangesAsync();
+        }
+
+        private static string? SanitizeEssays(ExamAnswersDto data)
+        {
+            foreach (var a in data.Answers ?? new())
+            {
+                if (a.EssayText is { Length: > EssayHtml.MaxHtmlLength })
+                    return "An essay answer is too long.";
+                a.EssayText = EssayHtml.Clean(a.EssayText);
+            }
+            return null;
         }
     }
 }
