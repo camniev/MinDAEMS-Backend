@@ -226,6 +226,7 @@ namespace MinDAES.Api.Controllers
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
 
             var employeeName = user.Employee?.EmpName ?? "Unknown";
+            var employeeEmail = user.Employee?.EmailAddress ?? string.Empty;
             var userTypeDescription = user.UserType?.UserTypeDesc ?? string.Empty;
             var mustChangePasswordOnFirstLogin = user.MustChangePasswordOnFirstLogin;
 
@@ -236,6 +237,7 @@ namespace MinDAES.Api.Controllers
                     new Claim(ClaimTypes.Name, user.UserName),
                     new Claim(ClaimTypes.Role, userTypeDescription),
                     new Claim(ClaimTypes.GivenName, employeeName),
+                    new Claim(ClaimTypes.Email, employeeEmail),
                     new Claim(
                         "mustChangePasswordOnFirstLogin",
                         mustChangePasswordOnFirstLogin.ToString().ToLower()

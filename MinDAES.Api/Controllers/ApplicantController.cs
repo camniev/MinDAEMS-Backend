@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MinDAES.Api.Data;
@@ -6,6 +7,7 @@ using MinDAES.Api.Domain.Entities;
 using MinDAES.Api.Domain.Enums;
 using MinDAES.Api.Helpers;
 using System.Linq.Expressions;
+using System.Security.Claims;
 
 namespace MinDAES.Api.Controllers
 {
@@ -174,30 +176,58 @@ namespace MinDAES.Api.Controllers
             }
         }
 
-        [HttpGet("MySchedules")]
-        public async Task<ActionResult<List<ApplicantExamScheduleResponseDto>>> GetMySchedules(
-            [FromQuery] string email)
+        // ---- Paste these members inside ApplicantController ----
+        // REPLACES the earlier MySchedules member and the MyExam/* members + helpers
+        // (ApplicantMySchedules.cs and ApplicantExamTakingEndpoints.cs can be deleted).
+        //
+        // Needs:  using System.Security.Claims;  using Microsoft.AspNetCore.Authorization;
+        //
+        // WHO is asking comes from the signed-in user's access token — never from the
+        // request. Each action requires the Applicant role (per action, because this
+        // controller also holds HR-only endpoints like EnrollApplicants).
+
+        private const string ApplicantRole = "Applicant";
+
+        // ASSUMPTION — the link between a login and a roster row: the access token
+        // carries an email claim, and that address is matched to Applicant.Email (the
+        // same value HR typed when enrolling them). That is only safe if the email on
+        // the account has been VERIFIED; otherwise anyone could register with someone
+        // else's address and see/take their exams. If your token has no email claim, or
+        // you'd rather link accounts to applicants by id, this is the one method to change.
+        private string? CurrentApplicantEmail()
         {
-            if (string.IsNullOrWhiteSpace(email))
-                return BadRequest(new { message = "Email is required." });
-        
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            return string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+        }
+
+        private ObjectResult NoEmailOnAccount() =>
+            StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Your account has no email address, so your exams can't be found. Please contact the administrator."
+            });
+
+        // GET api/Applicant/MySchedules
+        // The signed-in applicant's own exams that are open right now.
+        [Authorize(Roles = ApplicantRole)]
+        [HttpGet("MySchedules")]
+        public async Task<ActionResult<List<ApplicantExamScheduleResponseDto>>> GetMySchedules()
+        {
+            var email = CurrentApplicantEmail();
+            if (email == null) return NoEmailOnAccount();
+
             var now = TimeHelper.GetPhilippineTime();
-            var emailKey = email.Trim().ToLowerInvariant();
-        
-            // Pull this applicant's enrollments (across any exam) along with the
-            // Exam each one belongs to, so status can be computed per exam.
+
             var enrollments = await _mindaEsDbContext.ExamEnrollments
                 .AsNoTracking()
                 .Include(en => en.Exam)
                 .Include(en => en.Applicant)
-                .Where(en => en.Applicant != null && en.Applicant.Email.ToLower() == emailKey)
+                .Where(en => en.Applicant != null && en.Applicant.Email.ToLower() == email)
                 .Where(en => en.Exam != null && !en.Exam.IsArchived)
                 .ToListAsync();
-        
+
             var result = enrollments
                 .Select(en => new { en, status = ExamStatusHelper.ComputeDisplayStatus(en.Exam!, now) })
-                // Per the spec: applicants only see exams that are currently Ongoing.
-                .Where(x => x.status == "Ongoing")
+                .Where(x => x.status == "Ongoing")   // applicants only see exams that are open
                 .Select(x => new ApplicantExamScheduleResponseDto
                 {
                     ExamId = x.en.ExamId,
@@ -214,27 +244,21 @@ namespace MinDAES.Api.Controllers
                 .OrderBy(e => e.ExamDate)
                     .ThenBy(e => e.StartTime)
                 .ToList();
-        
+
             return Ok(result);
         }
-
-        // ---- Paste these members inside ApplicantController ----
-        // Identity is the same temporary email check as MySchedules: every call must
-        // name an email that owns the enrollment. Not real authentication.
 
         // POST api/Applicant/MyExam/{enrollmentId}/Start
         // Begins the attempt (records StartedAt the first time), or resumes it if
         // already started — calling it again never restarts the clock.
+        [Authorize(Roles = ApplicantRole)]
         [HttpPost("MyExam/{enrollmentId:guid}/Start")]
-        public async Task<ActionResult<ExamSessionResponseDto>> StartMyExam(
-            Guid enrollmentId, [FromBody] StartExamDto data)
+        public async Task<ActionResult<ExamSessionResponseDto>> StartMyExam(Guid enrollmentId)
         {
-            if (data == null)
-                return BadRequest(new { message = "Request body is required." });
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var email = CurrentApplicantEmail();
+            if (email == null) return NoEmailOnAccount();
 
-            var en = await FindOwnedEnrollmentAsync(enrollmentId, data.Email);
+            var en = await FindOwnedEnrollmentAsync(enrollmentId, email);
             if (en?.Exam == null)
                 return NotFound(new { message = "Exam enrollment not found." });
 
@@ -303,6 +327,7 @@ namespace MinDAES.Api.Controllers
         // PUT api/Applicant/MyExam/{enrollmentId}/Answers
         // Autosave. Replaces the applicant's whole saved answer set with what's sent,
         // so a question that was cleared on screen is cleared here too.
+        [Authorize(Roles = ApplicantRole)]
         [HttpPut("MyExam/{enrollmentId:guid}/Answers")]
         public async Task<ActionResult> SaveMyExamAnswers(
             Guid enrollmentId, [FromBody] ExamAnswersDto data)
@@ -312,7 +337,10 @@ namespace MinDAES.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var en = await FindOwnedEnrollmentAsync(enrollmentId, data.Email);
+            var email = CurrentApplicantEmail();
+            if (email == null) return NoEmailOnAccount();
+
+            var en = await FindOwnedEnrollmentAsync(enrollmentId, email);
             if (en?.Exam == null)
                 return NotFound(new { message = "Exam enrollment not found." });
 
@@ -345,6 +373,7 @@ namespace MinDAES.Api.Controllers
         // Saves the final answers and closes the attempt in one transaction.
         // Required-question checks are the UI's job: the server can't refuse a
         // submit when time has run out.
+        [Authorize(Roles = ApplicantRole)]
         [HttpPost("MyExam/{enrollmentId:guid}/Submit")]
         public async Task<ActionResult> SubmitMyExam(
             Guid enrollmentId, [FromBody] ExamAnswersDto data)
@@ -354,7 +383,10 @@ namespace MinDAES.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var en = await FindOwnedEnrollmentAsync(enrollmentId, data.Email);
+            var email = CurrentApplicantEmail();
+            if (email == null) return NoEmailOnAccount();
+
+            var en = await FindOwnedEnrollmentAsync(enrollmentId, email);
             if (en?.Exam == null)
                 return NotFound(new { message = "Exam enrollment not found." });
 
@@ -388,11 +420,10 @@ namespace MinDAES.Api.Controllers
 
         // ---- helpers ----
 
-        // Loads the enrollment only if it belongs to this email, with everything the
-        // rules need (exam, its questions and options).
-        private async Task<ExamEnrollment?> FindOwnedEnrollmentAsync(Guid enrollmentId, string email)
+        // Loads the enrollment only if it belongs to the signed-in applicant (their
+        // normalized email), with everything the rules need.
+        private async Task<ExamEnrollment?> FindOwnedEnrollmentAsync(Guid enrollmentId, string normalizedEmail)
         {
-            var key = email.Trim().ToLowerInvariant();
             return await _mindaEsDbContext.ExamEnrollments
                 .Include(en => en.Exam)
                     .ThenInclude(e => e!.Questions)
@@ -401,7 +432,7 @@ namespace MinDAES.Api.Controllers
                 .FirstOrDefaultAsync(en =>
                     en.ExamEnrollmentId == enrollmentId &&
                     en.Applicant != null &&
-                    en.Applicant.Email.ToLower() == key);
+                    en.Applicant.Email.ToLower() == normalizedEmail);
         }
 
         // Returns a response to send back if this attempt can't accept more answers

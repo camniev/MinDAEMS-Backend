@@ -2,15 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using MinDAES.Api.Domain.Entities;
 using MinDAES.Api.Domain.Enums;
 
-// ---- Request DTOs ----
+using System.ComponentModel.DataAnnotations;
 
-public class StartExamDto
-{
-    // Temporary identity, same as MySchedules — replace with the signed-in
-    // applicant once real login exists.
-    [Required]
-    public string Email { get; set; } = string.Empty;
-}
+// ---- Request DTOs ----
 
 public class SavedAnswerDto
 {
@@ -26,13 +20,29 @@ public class SavedAnswerDto
 
 public class ExamAnswersDto
 {
-    [Required]
-    public string Email { get; set; } = string.Empty;
-
+    // No email/identity field on purpose: who is answering comes from the
+    // signed-in user's access token, never from the request body.
     public List<SavedAnswerDto> Answers { get; set; } = new();
 }
 
 // ---- Response DTOs ----
+
+// One row on the applicant's "My Exam Schedules" page. Deliberately narrow —
+// nothing about any other applicant is reachable through this shape.
+public class ApplicantExamScheduleResponseDto
+{
+    public Guid ExamId { get; set; }
+    public Guid ExamEnrollmentId { get; set; }
+    public string ExamTitle { get; set; } = string.Empty;
+    public DateOnly ExamDate { get; set; }
+    public TimeOnly StartTime { get; set; }
+    public int DurationMinutes { get; set; }
+    public string? Instructions { get; set; }
+    public string Status { get; set; } = string.Empty;           // the exam's own status — always "Ongoing" here
+    public string EnrollmentStatus { get; set; } = string.Empty; // this applicant's own roster status
+    public decimal? Score { get; set; }                          // this applicant's own score only
+}
+
 // What the applicant's browser receives. There is deliberately NO IsCorrect
 // anywhere in here — unlike ExamQuestionOptionResponseDto (HR's view), this
 // must never contain the answer key.
