@@ -158,6 +158,34 @@ namespace MinDAES.Api.Controllers
 
         // ---- Close ----
 
+        //[HttpPatch("{examId:guid}/Close")]
+        //public async Task<ActionResult> CloseExamSchedule(Guid examId)
+        //{
+        //    var exam = await _mindaEsDbContext.Exams.FirstOrDefaultAsync(e => e.ExamId == examId);
+        //    if (exam == null)
+        //        return NotFound(new { message = "Exam schedule not found." });
+
+        //    if (exam.IsArchived)
+        //        return Conflict(new { message = "Cannot close an archived exam schedule." });
+
+        //    if (exam.Status != ExamStatus.Ongoing)
+        //        return Conflict(new { message = $"Cannot close an exam schedule that is {exam.Status}, not Ongoing." });
+
+        //    await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+        //    try
+        //    {
+        //        exam.Status = ExamStatus.Closed;
+        //        await _mindaEsDbContext.SaveChangesAsync();
+        //        await transaction.CommitAsync();
+        //        return Ok(new { message = "Exam schedule closed." });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await transaction.RollbackAsync();
+        //        return StatusCode(500, new { message = "Error closing exam schedule", error = ex.Message });
+        //    }
+        //}
+
         [HttpPatch("{examId:guid}/Close")]
         public async Task<ActionResult> CloseExamSchedule(Guid examId)
         {
@@ -175,15 +203,83 @@ namespace MinDAES.Api.Controllers
             try
             {
                 exam.Status = ExamStatus.Closed;
+
+                // Same transaction: the exam is closed and the logins are removed, or neither happens.
+                var accountsDeleted = await RemoveApplicantAccountsAsync(examId);
+
                 await _mindaEsDbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return Ok(new { message = "Exam schedule closed." });
+                return Ok(new
+                {
+                    message = accountsDeleted > 0
+                        ? $"Exam schedule closed. {accountsDeleted} applicant account(s) removed."
+                        : "Exam schedule closed.",
+                    accountsDeleted
+                });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
                 return StatusCode(500, new { message = "Error closing exam schedule", error = ex.Message });
             }
+        }
+
+        // Hard-deletes the login accounts (Users rows plus their linked Employee rows) of this
+        // exam's roster, with two guards:
+        //  1. Only users of type "Applicant" — an applicant's email can match a staff account's
+        //     username, and that must never be deleted.
+        //  2. Skips anyone still enrolled in another exam that is Upcoming or Ongoing. One account
+        //     is shared across every exam an applicant is enrolled in (RegisterApplicants reuses it),
+        //     so deleting it here would lock them out of their other exams.
+        // Call it from EVERY code path that sets an exam to Closed (including your auto-close when
+        // the scheduled window passes), and call SaveChangesAsync afterwards.
+        private async Task<int> RemoveApplicantAccountsAsync(Guid examId)
+        {
+            var applicantTypeId = await _mindaEsDbContext.UserTypes
+                .Where(ut => ut.UserTypeDesc == "Applicant")
+                .Select(ut => (Guid?)ut.UserTypeId)
+                .SingleOrDefaultAsync();
+            if (applicantTypeId == null) return 0;
+
+            var rosterEmails = await _mindaEsDbContext.ExamEnrollments
+                .Where(en => en.ExamId == examId && en.Applicant.Email != null)
+                .Select(en => en.Applicant.Email!)
+                .Distinct()
+                .ToListAsync();
+            if (rosterEmails.Count == 0) return 0;
+
+            var stillNeeded = await _mindaEsDbContext.ExamEnrollments
+                .Where(en => en.ExamId != examId
+                          && rosterEmails.Contains(en.Applicant.Email!)
+                          && !en.Exam.IsArchived
+                          && (en.Exam.Status == ExamStatus.Upcoming || en.Exam.Status == ExamStatus.Ongoing))
+                .Select(en => en.Applicant.Email!)
+                .Distinct()
+                .ToListAsync();
+
+            var toDelete = rosterEmails.Except(stillNeeded, StringComparer.OrdinalIgnoreCase).ToList();
+            if (toDelete.Count == 0) return 0;
+
+            var users = await _mindaEsDbContext.Users
+                .Include(u => u.Employee)
+                .Where(u => u.UserTypeId == applicantTypeId
+                         && u.UserName != null
+                         && toDelete.Contains(u.UserName))
+                .ToListAsync();
+
+            // The Employee row created alongside each account goes with it. It is found through the
+            // user's own EmpId (not by email), and only if it is an "Applicant" row, so a staff
+            // Employee record can never be removed here. EF deletes the User before its Employee.
+            var employees = users
+                .Select(u => u.Employee)
+                .Where(e => e != null && e.Position == "Applicant")
+                .Select(e => e!)
+                .ToList();
+
+            _mindaEsDbContext.Users.RemoveRange(users);
+            _mindaEsDbContext.Employees.RemoveRange(employees);
+
+            return users.Count;
         }
 
         private static string MapQuestionType(QuestionType type) => type switch

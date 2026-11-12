@@ -272,6 +272,37 @@
         }
       }
     },
+    "/api/Auth/RegisterApplicants": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterApplicantsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterApplicantsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterApplicantsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Auth/UpdateUser": {
       "put": {
         "tags": [
@@ -1118,6 +1149,24 @@
         },
         "additionalProperties": false
       },
+      "ApplicantAccountDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "applicantCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ApplicantEnrollmentDto": {
         "required": [
           "email",
@@ -1917,6 +1966,19 @@
         ],
         "type": "integer",
         "format": "int32"
+      },
+      "RegisterApplicantsRequest": {
+        "type": "object",
+        "properties": {
+          "applicants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicantAccountDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       },
       "SaveExamQuestionsDto": {
         "required": [

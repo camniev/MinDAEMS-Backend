@@ -183,6 +183,22 @@
   },
   {
     "ContainingType": "MinDAES.Api.Controllers.AuthController",
+    "Method": "RegisterApplicants",
+    "RelativePath": "api/Auth/RegisterApplicants",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "model",
+        "Type": "MinDAES.Api.Domain.DTOs.RegisterApplicantsRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.AuthController",
     "Method": "UpdatePasswordOnFirstLogin",
     "RelativePath": "api/Auth/UpdatePasswordOnFirstLogin",
     "HttpMethod": "PUT",

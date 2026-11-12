@@ -20,6 +20,18 @@ namespace MinDAES.Api.Domain.DTOs
         public string? ApplicantCode { get; set; }
     }
 
+    public class ApplicantAccountDto
+    {
+        public string? Name { get; set; }
+        public string? Email { get; set; }
+        public string? ApplicantCode { get; set; }
+    }
+
+    public class RegisterApplicantsRequest
+    {
+        public List<ApplicantAccountDto> Applicants { get; set; } = new();
+    }
+
     public class ApplicantExamScheduleResponseDto
     {
         public Guid ExamId { get; set; }

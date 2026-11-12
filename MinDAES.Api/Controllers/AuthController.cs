@@ -75,6 +75,106 @@ namespace MinDAES.Api.Controllers
             return Ok(new { message = "User added successfully.", UserId = user.UserId });
         }
 
+        [HttpPost("RegisterApplicants")]
+        public async Task<ActionResult> RegisterApplicants([FromBody] RegisterApplicantsRequest model)
+        {
+            if (model?.Applicants == null || model.Applicants.Count == 0)
+                return BadRequest("At least one applicant is required.");
+
+            var invalid = model.Applicants
+                .Where(a => string.IsNullOrWhiteSpace(a.Name)
+                         || string.IsNullOrWhiteSpace(a.Email)
+                         || string.IsNullOrWhiteSpace(a.ApplicantCode))
+                .ToList();
+            if (invalid.Count > 0)
+                return BadRequest("Every applicant needs a name, an email and an applicant code.");
+
+            //if (!Guid.TryParse(_configuration["Auth:ApplicantUserTypeId"], out var applicantUserTypeId))
+            //    return StatusCode(500, "Applicant user type is not configured (Auth:ApplicantUserTypeId).");
+
+            var applicantUserTypeId = await _minDAEsDbContext.UserTypes
+                .Where(ut => ut.UserTypeDesc == "Applicant")
+                .Select(ut => (Guid?)ut.UserTypeId)
+                .SingleOrDefaultAsync();
+
+            if (applicantUserTypeId == null)
+                return StatusCode(500, "The 'Applicant' user type was not found.");
+
+            try
+            {
+                var (created, existing) = await EnsureApplicantAccountsAsync(model.Applicants, applicantUserTypeId.Value);
+                return Ok(new
+                {
+                    created,
+                    alreadyExisted = existing,
+                    message = $"{created} account(s) created, {existing} already existed."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error creating applicant accounts", error = ex.Message });
+            }
+        }
+
+        // Kept separate so EnrollApplicants can call it too. That would make "enroll + create
+        // accounts" a single transaction on the server, which is the more robust long-term setup.
+        private async Task<(int created, int existing)> EnsureApplicantAccountsAsync(
+            IEnumerable<ApplicantAccountDto> applicants, Guid applicantUserTypeId)
+        {
+            // One entry per email, even if the request lists someone twice.
+            var wanted = applicants
+                .GroupBy(a => a.Email!.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+
+            var emails = wanted.Select(a => a.Email!.Trim()).ToList();
+            var taken = (await _minDAEsDbContext.Users
+                    .Where(u => emails.Contains(u.UserName))
+                    .Select(u => u.UserName)
+                    .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var created = 0;
+            foreach (var a in wanted)
+            {
+                var email = a.Email!.Trim();
+                if (taken.Contains(email)) continue;
+
+                var employee = new Employee
+                {
+                    EmpId = Guid.NewGuid(),
+                    EmpName = a.Name!.Trim(),
+                    Position = "Applicant",
+                    EmailAddress = email,
+                    IsActive = true
+                };
+
+                var user = new User
+                {
+                    UserId = Guid.NewGuid(),
+                    UserName = email,
+                    UserTypeId = applicantUserTypeId,
+                    IsActive = true,
+                    EmpId = employee.EmpId,
+                    Employee = employee,
+                    DatePasswordLastSet = TimeHelper.GetPhilippineTime(),
+                    // The applicant code IS the credential given to the applicant, so there is
+                    // nothing to force them to change. Importantly, this also means the password
+                    // is hashed: Register stores it as plain text when this flag is true.
+                    MustChangePasswordOnFirstLogin = false,
+                    PassWord = PasswordHasher.HashPassword(a.ApplicantCode!.Trim())
+                };
+
+                _minDAEsDbContext.Employees.Add(employee);
+                _minDAEsDbContext.Users.Add(user);
+                created++;
+            }
+
+            // One SaveChanges = one transaction: either every new account is saved or none is.
+            if (created > 0) await _minDAEsDbContext.SaveChangesAsync();
+            return (created, wanted.Count - created);
+        }
+
         [HttpPut("UpdateUser")]
         public async Task<ActionResult> UpdateUser([FromBody] UserRegistrationModel data)
         {
