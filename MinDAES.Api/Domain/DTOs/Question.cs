@@ -20,6 +20,7 @@ namespace MinDAES.Api.Domain.DTOs
         public int Points { get; set; } = 5;
 
         public bool Required { get; set; } = true;
+        public Guid? AttachmentId { get; set; }
 
         public List<QuestionOptionDto> Options { get; set; } = new();
     }

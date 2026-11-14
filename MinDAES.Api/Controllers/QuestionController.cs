@@ -43,6 +43,23 @@ namespace MinDAES.Api.Controllers
             if (typeErrors.Count > 0)
                 return BadRequest(new { message = "Invalid question data.", errors = typeErrors });
 
+            // PDF: every link must point at a PDF uploaded to THIS exam. Done up front, like the
+            // type check, so a bad id is a clean 400 and not a foreign-key error mid-transaction.
+            var linkedIds = data.Questions
+                .Where(q => q.AttachmentId != null)
+                .Select(q => q.AttachmentId!.Value)
+                .Distinct()
+                .ToList();
+            if (linkedIds.Count > 0)
+            {
+                var validIds = await _minDAESDbContext.Set<ExamAttachment>()
+                    .Where(a => a.ExamId == examId && linkedIds.Contains(a.Id))
+                    .Select(a => a.Id)
+                    .ToListAsync();
+                if (linkedIds.Except(validIds).Any())
+                    return BadRequest(new { message = "A question refers to a PDF that is not attached to this exam." });
+            }
+
             await using var transaction = await _minDAESDbContext.Database.BeginTransactionAsync();
             try
             {
@@ -65,6 +82,7 @@ namespace MinDAES.Api.Controllers
                     Points = q.Points,
                     IsRequired = q.Required,
                     OrderIndex = index,
+                    AttachmentId = q.AttachmentId, // PDF: the PDF keeps its own id, so the link survives the new question ids
                     Options = q.Options.Select((o, oIndex) => new QuestionOption
                     {
                         QuestionOptionId = Guid.NewGuid(),

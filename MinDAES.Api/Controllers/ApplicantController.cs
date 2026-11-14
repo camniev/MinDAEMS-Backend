@@ -248,6 +248,42 @@ namespace MinDAES.Api.Controllers
             return Ok(result);
         }
 
+        // GET api/Applicant/MyExam/{enrollmentId}/Attachments/{attachmentId}
+        // A reference PDF linked to one of this exam's questions.
+        [Authorize(Roles = ApplicantRole)]
+        [HttpGet("MyExam/{enrollmentId:guid}/Attachments/{attachmentId:guid}")]
+        public async Task<IActionResult> GetMyExamAttachment(Guid enrollmentId, Guid attachmentId)
+        {
+            var email = CurrentApplicantEmail();
+            if (email == null) return NoEmailOnAccount();
+
+            var en = await FindOwnedEnrollmentAsync(enrollmentId, email);
+            if (en?.Exam == null)
+                return NotFound(new { message = "Exam enrollment not found." });
+
+            // Reference material is only available once the attempt has started and while it is open.
+            if (en.StartedAt == null)
+                return Conflict(new { message = "The exam has not been started." });
+            var now = TimeHelper.GetPhilippineTime();
+            var over = await RejectIfAttemptOverAsync(en, now, 0);
+            if (over != null) return over;
+        
+            // Only a PDF that one of THIS exam's questions actually links to.
+            var allowed = await _mindaEsDbContext.Set<Question>()
+                .AnyAsync(q => q.ExamId == en.ExamId && q.AttachmentId == attachmentId);
+            if (!allowed)
+                return NotFound(new { message = "Attachment not found." });
+        
+            var file = await _mindaEsDbContext.Set<ExamAttachment>().AsNoTracking()
+                .Where(a => a.Id == attachmentId)
+                .Select(a => new { a.FileName, a.Content })
+                .FirstOrDefaultAsync();
+            if (file == null)
+                return NotFound(new { message = "Attachment not found." });
+        
+            return PdfResponse.Inline(this, file.FileName, file.Content);
+        }
+
         // POST api/Applicant/MyExam/{enrollmentId}/Start
         // Begins the attempt (records StartedAt the first time), or resumes it if
         // already started — calling it again never restarts the clock.
@@ -292,6 +328,14 @@ namespace MinDAES.Api.Controllers
                 .Where(a => a.ExamEnrollmentId == en.ExamEnrollmentId)
                 .ToListAsync();
 
+            // Reference PDFs: metadata only. Never Include() the attachment here, or every
+            // PDF's bytes would be loaded just to list file names.
+            var attachments = await _mindaEsDbContext.Set<ExamAttachment>()
+                .AsNoTracking()
+                .Where(a => a.ExamId == exam.ExamId)
+                .Select(a => new ApplicantAttachmentDto { Id = a.Id, FileName = a.FileName, SizeBytes = a.SizeBytes })
+                .ToDictionaryAsync(a => a.Id);
+
             return Ok(new ExamSessionResponseDto
             {
                 ExamEnrollmentId = en.ExamEnrollmentId,
@@ -307,6 +351,9 @@ namespace MinDAES.Api.Controllers
                         Text = q.Text,
                         Points = q.Points,
                         Required = q.IsRequired,
+                        Attachment = q.AttachmentId != null && attachments.TryGetValue(q.AttachmentId.Value, out var att)
+                            ? att
+                            : null,
                         Options = q.Options
                             .OrderBy(o => o.OrderIndex)
                             .Select(o => new ApplicantOptionDto { Id = o.QuestionOptionId, Text = o.Text })

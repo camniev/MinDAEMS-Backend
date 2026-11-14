@@ -61,6 +61,14 @@ public class ApplicantQuestionDto
     public int Points { get; set; }
     public bool Required { get; set; }
     public List<ApplicantOptionDto> Options { get; set; } = new();
+    public ApplicantAttachmentDto? Attachment { get; set; }
+}
+
+public class ApplicantAttachmentDto
+{
+    public Guid Id { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public long SizeBytes { get; set; }
 }
 
 public class ExamSessionResponseDto
