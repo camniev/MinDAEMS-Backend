@@ -15,6 +15,7 @@ namespace MinDAES.Api.Data
         public DbSet<QuestionOption> QuestionOptions { get; set; }
         public DbSet<Applicant> Applicants { get; set; }
         public DbSet<ExamEnrollment> ExamEnrollments { get; set; }
+        public DbSet<ExamAttachment> ExamAttachments { get; set; }
         public DbSet<Answer> Answers { get; set; }
         public DbSet<AnswerOption> AnswerOptions { get; set; }
         public DbSet<User> Users { get; set; }

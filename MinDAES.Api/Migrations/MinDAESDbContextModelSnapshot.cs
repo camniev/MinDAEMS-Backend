@@ -213,6 +213,43 @@ namespace MinDAES.Api.Migrations
                     b.ToTable("EXAMS");
                 });
 
+            modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("ExamAttachmentId");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)")
+                        .HasColumnName("Content");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("ExamId");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)")
+                        .HasColumnName("FileName");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("SizeBytes");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("UploadedAt");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
+
+                    b.ToTable("EXAM_ATTACHMENTS");
+                });
+
             modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamEnrollment", b =>
                 {
                     b.Property<Guid>("ExamEnrollmentId")
@@ -268,6 +305,10 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("QuestionId");
 
+                    b.Property<Guid?>("AttachmentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("AttachmentId");
+
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uniqueidentifier")
                         .HasColumnName("ExamId");
@@ -295,6 +336,8 @@ namespace MinDAES.Api.Migrations
                         .HasColumnName("QuestionType");
 
                     b.HasKey("QuestionId");
+
+                    b.HasIndex("AttachmentId");
 
                     b.HasIndex("ExamId");
 
@@ -458,6 +501,17 @@ namespace MinDAES.Api.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamAttachment", b =>
+                {
+                    b.HasOne("MinDAES.Api.Domain.Entities.Exam", "Exam")
+                        .WithMany("Attachments")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+                });
+
             modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamEnrollment", b =>
                 {
                     b.HasOne("MinDAES.Api.Domain.Entities.Applicant", "Applicant")
@@ -479,11 +533,17 @@ namespace MinDAES.Api.Migrations
 
             modelBuilder.Entity("MinDAES.Api.Domain.Entities.Question", b =>
                 {
+                    b.HasOne("MinDAES.Api.Domain.Entities.ExamAttachment", "Attachment")
+                        .WithMany()
+                        .HasForeignKey("AttachmentId");
+
                     b.HasOne("MinDAES.Api.Domain.Entities.Exam", "Exam")
                         .WithMany("Questions")
                         .HasForeignKey("ExamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Attachment");
 
                     b.Navigation("Exam");
                 });
@@ -531,6 +591,8 @@ namespace MinDAES.Api.Migrations
 
             modelBuilder.Entity("MinDAES.Api.Domain.Entities.Exam", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Enrollments");
 
                     b.Navigation("Questions");

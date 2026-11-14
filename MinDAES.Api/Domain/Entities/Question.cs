@@ -37,6 +37,11 @@ namespace MinDAES.Api.Domain.Entities
         [Column("OrderIndex")]
         public int OrderIndex { get; set; }
 
+        [Column("AttachmentId")]
+        [ForeignKey(nameof(Attachment))]
+        public Guid? AttachmentId { get; set; }
+        public ExamAttachment? Attachment { get; set; }
+
         public ICollection<QuestionOption> Options { get; set; } = new List<QuestionOption>();
     }
 
