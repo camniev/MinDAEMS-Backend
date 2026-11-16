@@ -64,6 +64,27 @@
   },
   {
     "ContainingType": "MinDAES.Api.Controllers.ApplicantController",
+    "Method": "GetMyExamAttachment",
+    "RelativePath": "api/Applicant/MyExam/{enrollmentId}/Attachments/{attachmentId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "enrollmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "attachmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ApplicantController",
     "Method": "StartMyExam",
     "RelativePath": "api/Applicant/MyExam/{enrollmentId}/Start",
     "HttpMethod": "POST",
@@ -355,6 +376,69 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "MinDAES.Api.Controllers.ExamAttachmentsController",
+    "Method": "Upload",
+    "RelativePath": "api/Exam/{examId}/Attachments",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "file",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ExamAttachmentsController",
+    "Method": "Get",
+    "RelativePath": "api/Exam/{examId}/Attachments/{attachmentId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "attachmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ExamAttachmentsController",
+    "Method": "Delete",
+    "RelativePath": "api/Exam/{examId}/Attachments/{attachmentId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "attachmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "MinDAES.Api.Controllers.ExamController",
     "Method": "CloseExamSchedule",
     "RelativePath": "api/Exam/{examId}/Close",
@@ -443,6 +527,59 @@
         "StatusCode": 200
       }
     ]
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.GradingController",
+    "Method": "GetRoster",
+    "RelativePath": "api/Grading/{examId}/Roster",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.GradingController",
+    "Method": "GetSubmission",
+    "RelativePath": "api/Grading/Enrollments/{enrollmentId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "enrollmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.GradingController",
+    "Method": "SaveGrade",
+    "RelativePath": "api/Grading/Enrollments/{enrollmentId}/Grade",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "enrollmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "GradeRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
   },
   {
     "ContainingType": "MinDAES.Api.Controllers.QuestionController",

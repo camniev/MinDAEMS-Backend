@@ -72,11 +72,11 @@ namespace MinDAES.Api.Controllers
             [FromQuery] bool includeArchived = false)
         {
             var now = TimeHelper.GetPhilippineTime();
-        
+
             var query = _mindaEsDbContext.Exams.AsNoTracking();
             if (!includeArchived)
                 query = query.Where(e => !e.IsArchived);
-        
+
             var exams = await query
                 .Include(e => e.Questions)
                     .ThenInclude(q => q.Options)
@@ -85,7 +85,27 @@ namespace MinDAES.Api.Controllers
                 .OrderByDescending(e => e.ExamDate)
                     .ThenByDescending(e => e.StartTime)
                 .ToListAsync();
-        
+
+            // PDF: metadata only, in a separate query. Do NOT .Include(e => e.Attachments) above —
+            // that would load every PDF's bytes just to list file names.
+            var examIds = exams.Select(e => e.ExamId).ToList();
+            var attachmentRows = await _mindaEsDbContext.Set<ExamAttachment>()
+                .AsNoTracking()
+                .Where(a => examIds.Contains(a.ExamId))
+                .OrderBy(a => a.UploadedAt)
+                .Select(a => new { a.ExamId, a.Id, a.FileName, a.SizeBytes })
+                .ToListAsync();
+            var attachmentsByExam = attachmentRows
+                .GroupBy(a => a.ExamId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(a => new ExamAttachmentResponseDto
+                    {
+                        Id = a.Id,
+                        FileName = a.FileName,
+                        SizeBytes = a.SizeBytes
+                    }).ToList());
+
             var result = exams.Select(exam => new ExamScheduleResponseDto
             {
                 ExamId = exam.ExamId,
@@ -98,21 +118,29 @@ namespace MinDAES.Api.Controllers
                 AccessType = exam.AccessType == ExamAccessType.Private ? "Private" : "Public",
                 ExamCode = exam.ExamCode,
                 Status = exam.Status.ToString(),
-        
-                Questions = exam.Questions?.Select(q => new ExamQuestionResponseDto
+
+                // PDF: the exam's uploaded reference PDFs
+                Attachments = attachmentsByExam.TryGetValue(exam.ExamId, out var examAttachments)
+                    ? examAttachments
+                    : new List<ExamAttachmentResponseDto>(),
+
+                // ORDER: Include() gives no guaranteed order, and question ids are random Guids, so the
+                // saved order could come back shuffled. OrderIndex is what SaveQuestions writes.
+                Questions = exam.Questions?.OrderBy(q => q.OrderIndex).Select(q => new ExamQuestionResponseDto
                 {
                     Id = q.QuestionId,
                     Type = MapQuestionType(q.Type),
                     Points = q.Points,
                     Required = q.IsRequired,
                     Text = q.Text,
-                    Options = q.Options?.Select(o => new ExamQuestionOptionResponseDto
+                    AttachmentId = q.AttachmentId, // PDF: which uploaded PDF this question links to
+                    Options = q.Options?.OrderBy(o => o.OrderIndex).Select(o => new ExamQuestionOptionResponseDto
                     {
                         Text = o.Text,
                         IsCorrect = o.IsCorrect,
                     }).ToList() ?? new List<ExamQuestionOptionResponseDto>(),
                 }).ToList() ?? new List<ExamQuestionResponseDto>(),
-        
+
                 Applicants = exam.Enrollments?.Select(en => new ExamApplicantResponseDto
                 {
                     ExamEnrollmentId = en.ExamEnrollmentId,
@@ -124,7 +152,7 @@ namespace MinDAES.Api.Controllers
                     Score = en.Score,
                 }).ToList() ?? new List<ExamApplicantResponseDto>(),
             }).ToList();
-        
+
             return Ok(result);
         }
 

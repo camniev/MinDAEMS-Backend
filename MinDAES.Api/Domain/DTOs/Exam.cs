@@ -31,6 +31,7 @@ namespace MinDAES.Api.Domain.DTOs
         public string Status { get; set; } // computed: Upcoming / Active / Completed
         public List<ExamQuestionResponseDto> Questions { get; set; } = new();
         public List<ExamApplicantResponseDto> Applicants { get; set; } = new();
+        public List<ExamAttachmentResponseDto> Attachments { get; set; } = new();
     }
 
     public class ExamQuestionResponseDto
@@ -40,6 +41,7 @@ namespace MinDAES.Api.Domain.DTOs
         public int Points { get; set; }
         public bool Required { get; set; }
         public string Text { get; set; }
+        public Guid? AttachmentId { get; set; }
         public List<ExamQuestionOptionResponseDto> Options { get; set; } = new();
     }
 
@@ -66,5 +68,12 @@ namespace MinDAES.Api.Domain.DTOs
     public class ArchiveExamDto
     {
         public Guid? UserId { get; set; }
+    }
+
+    public class ExamAttachmentResponseDto
+    {
+        public Guid Id { get; set; }
+        public string FileName { get; set; } = string.Empty;
+        public long SizeBytes { get; set; }
     }
 }

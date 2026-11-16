@@ -117,6 +117,38 @@
         }
       }
     },
+    "/api/Applicant/MyExam/{enrollmentId}/Attachments/{attachmentId}": {
+      "get": {
+        "tags": [
+          "Applicant"
+        ],
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Applicant/MyExam/{enrollmentId}/Start": {
       "post": {
         "tags": [
@@ -784,6 +816,199 @@
         }
       }
     },
+    "/api/Exam/{examId}/Attachments": {
+      "post": {
+        "tags": [
+          "ExamAttachments"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "file": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Exam/{examId}/Attachments/{attachmentId}": {
+      "get": {
+        "tags": [
+          "ExamAttachments"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ExamAttachments"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Grading/{examId}/Roster": {
+      "get": {
+        "tags": [
+          "Grading"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Grading/Enrollments/{enrollmentId}": {
+      "get": {
+        "tags": [
+          "Grading"
+        ],
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Grading/Enrollments/{enrollmentId}/Grade": {
+      "put": {
+        "tags": [
+          "Grading"
+        ],
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Question/{examId}/SaveQuestions": {
       "post": {
         "tags": [
@@ -1167,6 +1392,24 @@
         },
         "additionalProperties": false
       },
+      "ApplicantAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
       "ApplicantEnrollmentDto": {
         "required": [
           "email",
@@ -1282,6 +1525,9 @@
               "$ref": "#/components/schemas/ApplicantOptionDto"
             },
             "nullable": true
+          },
+          "attachment": {
+            "$ref": "#/components/schemas/ApplicantAttachmentDto"
           }
         },
         "additionalProperties": false
@@ -1461,6 +1707,13 @@
             "format": "uuid",
             "nullable": true
           },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExamAttachment"
+            },
+            "nullable": true
+          },
           "questions": {
             "type": "array",
             "items": {
@@ -1530,6 +1783,63 @@
             "type": "number",
             "format": "double",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExamAttachment": {
+        "required": [
+          "content",
+          "examId",
+          "fileName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "examId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "exam": {
+            "$ref": "#/components/schemas/Exam"
+          },
+          "fileName": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "content": {
+            "type": "string",
+            "format": "byte"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExamAttachmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
           }
         },
         "additionalProperties": false
@@ -1681,6 +1991,11 @@
             "type": "string",
             "nullable": true
           },
+          "attachmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
           "options": {
             "type": "array",
             "items": {
@@ -1747,6 +2062,13 @@
               "$ref": "#/components/schemas/ExamApplicantResponseDto"
             },
             "nullable": true
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExamAttachmentResponseDto"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -1797,6 +2119,36 @@
         ],
         "type": "integer",
         "format": "int32"
+      },
+      "GradeRequest": {
+        "type": "object",
+        "properties": {
+          "finalize": {
+            "type": "boolean"
+          },
+          "marks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarkDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MarkDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pointsAwarded": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
       },
       "PasswordUpdateModel": {
         "type": "object",
@@ -1861,6 +2213,14 @@
             "type": "integer",
             "format": "int32"
           },
+          "attachmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "attachment": {
+            "$ref": "#/components/schemas/ExamAttachment"
+          },
           "options": {
             "type": "array",
             "items": {
@@ -1895,6 +2255,11 @@
           },
           "required": {
             "type": "boolean"
+          },
+          "attachmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           },
           "options": {
             "type": "array",
