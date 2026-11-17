@@ -1,0 +1,25 @@
+{
+  "Files": [
+    {
+      "Id": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "PackagePath": "staticwebassets/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.MinDAES.Api.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.build.MinDAES.Api.props",
+      "PackagePath": "build\\MinDAES.Api.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildMultiTargeting.MinDAES.Api.props",
+      "PackagePath": "buildMultiTargeting\\MinDAES.Api.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildTransitive.MinDAES.Api.props",
+      "PackagePath": "buildTransitive\\MinDAES.Api.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

@@ -1,11 +1,39 @@
 {
   "Version": 1,
-  "Hash": "Dz/IzTuzySse+ZeL4isLBZ48/1ZNqLg4uRXFqX31LN8=",
+  "Hash": "w62rIkgJ2PAv9Vx9PSOQfTKWqYZY6xxfSFLcC88tNJc=",
   "Source": "MinDAES.Api",
   "BasePath": "_content/MinDAES.Api",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
-  "Assets": []
+  "DiscoveryPatterns": [
+    {
+      "Name": "MinDAES.Api/wwwroot",
+      "Source": "MinDAES.Api",
+      "ContentRoot": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/",
+      "BasePath": "_content/MinDAES.Api",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "SourceId": "MinDAES.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/",
+      "BasePath": "_content/MinDAES.Api",
+      "RelativePath": "uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"
+    }
+  ]
 }
