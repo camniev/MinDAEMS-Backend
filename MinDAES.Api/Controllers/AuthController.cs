@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Hosting;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using MinDAES.Api.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
+using System.Linq.Expressions;
 using MinDAES.Api.Helpers;
 using MinDAES.Api.Data;
 using MinDAES.Api.Utilities;
@@ -32,6 +33,19 @@ namespace MinDAES.Api.Controllers
             _configuration = configuration;
         }
 
+        // THE root cause of "Unknown" names and empty emails after a refresh: Login loaded the
+        // user WITH Employee, but refresh-token loaded it WITHOUT, so every refreshed token had
+        // given_name = "Unknown" and email = "" — and the applicant endpoints read the email
+        // claim, so they answered 403 "no email address" from the first refresh (about 14 minutes
+        // in) onward. Both now go through this one method so they can't drift apart again.
+        private Task<User?> LoadUserForTokenAsync(Expression<Func<User, bool>> predicate) =>
+            _minDAEsDbContext.Users
+                .Include(u => u.UserType)
+                .Include(u => u.Employee)
+                .FirstOrDefaultAsync(predicate);
+
+        // TODO (security, see notes): Register, RegisterApplicants and UpdateUser are open to
+        // anyone right now. Protect them with [Authorize(Roles = "<your HR/admin role>")].
         [HttpPost("Register")]
         public async Task<ActionResult> Register([FromBody] UserRegistrationModel model)
         {
@@ -40,7 +54,8 @@ namespace MinDAES.Api.Controllers
                 return BadRequest("Username already exists.");
             }
 
-            var employee = new Employee {
+            var employee = new Employee
+            {
                 EmpId = Guid.NewGuid(),
                 EmpName = model.Employee.EmpName,
                 Position = model.Employee.Position,
@@ -48,7 +63,8 @@ namespace MinDAES.Api.Controllers
                 IsActive = true
             };
 
-            var user = new User {
+            var user = new User
+            {
                 UserId = Guid.NewGuid(),
                 UserName = model.UserName,
                 UserTypeId = model.UserType.UtId,
@@ -181,14 +197,15 @@ namespace MinDAES.Api.Controllers
             var user = await _minDAEsDbContext.Users
             .Include(u => u.Employee)
             .FirstOrDefaultAsync(u => u.UserId == data.UserId);
-            
-            if (user == null) {
+
+            if (user == null)
+            {
                 return NotFound("User not found.");
             }
 
             user.UserName = data.UserName;
             user.UserTypeId = data.UserType.UtId;
-            
+
             if (!string.IsNullOrEmpty(data.PassWord))
             {
                 if (data.MustChangePasswordOnFirstLogin == true)
@@ -208,18 +225,16 @@ namespace MinDAES.Api.Controllers
             user.MustChangePasswordOnFirstLogin = data.MustChangePasswordOnFirstLogin;
 
             await _minDAEsDbContext.SaveChangesAsync();
-            return Ok(new { message = "User updated successfully."});
+            return Ok(new { message = "User updated successfully." });
         }
 
         [HttpPost("Login")]
         public async Task<ActionResult> Login(UserLoginModel model)
         {
-            var user = await _minDAEsDbContext.Users
-                .Include(u => u.UserType)
-                .Include(u => u.Employee)
-                .FirstOrDefaultAsync(u => u.UserName == model.UserName);
+            var user = await LoadUserForTokenAsync(u => u.UserName == model.UserName);
 
-            if (user == null)
+            // Same message for "no such user" and "deactivated", so it doesn't reveal which exist.
+            if (user == null || !user.IsActive)
             {
                 return Unauthorized(new { message = "Incorrect username or password" });
             }
@@ -248,7 +263,7 @@ namespace MinDAES.Api.Controllers
 
             SetRefreshTokenCookie(refreshToken);
 
-            return Ok( new { accessToken });
+            return Ok(new { accessToken });
         }
 
         [HttpPut("UpdatePasswordOnFirstLogin")]
@@ -279,38 +294,55 @@ namespace MinDAES.Api.Controllers
             return Ok(new { message = "Password updated successfully." });
         }
 
-        [Authorize]
+        // Anonymous on purpose, and keyed on the refresh cookie rather than the access token.
+        // With [Authorize], logging out after the 15-minute access token had expired returned 401:
+        // the browser looked logged out, but the refresh cookie and its database row stayed
+        // valid, so the next page load silently signed the person back in.
+        [AllowAnonymous]
         [HttpPost("Logout")]
         public async Task<IActionResult> Logout()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _minDAEsDbContext.Users.FindAsync(new Guid(userId));
-
-            if (user != null)
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (!string.IsNullOrEmpty(refreshToken))
             {
-                user.RefreshToken = null;
-                user.RefreshTokenExpiryTime = null;
-                await _minDAEsDbContext.SaveChangesAsync();
+                var user = await _minDAEsDbContext.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+                if (user != null)
+                {
+                    user.RefreshToken = null;
+                    user.RefreshTokenExpiryTime = null;
+                    await _minDAEsDbContext.SaveChangesAsync();
+                }
             }
 
-            Response.Cookies.Delete("refreshToken");
+            // Must use the same Path / SameSite / Secure as when it was set, or the browser
+            // keeps the cookie.
+            Response.Cookies.Delete("refreshToken", RefreshCookieOptions(null));
             return Ok();
         }
 
         private void SetRefreshTokenCookie(string refreshToken)
         {
-            var isProduction = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production";
+            Response.Cookies.Append("refreshToken", refreshToken, RefreshCookieOptions(DateTimeOffset.UtcNow.AddDays(7)));
+        }
 
-            var cookieOptions = new CookieOptions
+        private CookieOptions RefreshCookieOptions(DateTimeOffset? expires)
+        {
+            // Secure when the app runs in Production OR the request itself came in over HTTPS.
+            // The old check looked only at the ASPNETCORE_ENVIRONMENT value "Production": on a
+            // server named "Staging" (or anything else) it fell back to Lax + non-Secure, and a
+            // front end on a different site then never sends the refresh cookie, so every page
+            // reload logs the person out.
+            var isProduction = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production";
+            var secure = isProduction || Request.IsHttps;
+
+            return new CookieOptions
             {
                 HttpOnly = true,
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = expires,
                 Path = "/",
-                SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax, // Use None for cross-site cookies in production, Lax otherwise
-                Secure = isProduction // Secure should be true in production with HTTPS, false in development
+                SameSite = secure ? SameSiteMode.None : SameSiteMode.Lax, // None needs Secure
+                Secure = secure
             };
-
-            Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
         }
 
         private string GenerateJwtToken(User user)
@@ -326,7 +358,12 @@ namespace MinDAES.Api.Controllers
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
 
             var employeeName = user.Employee?.EmpName ?? "Unknown";
-            var employeeEmail = user.Employee?.EmailAddress ?? string.Empty;
+            // Applicant accounts use their email as the username, so fall back to that rather
+            // than an empty claim if the Employee row is ever missing.
+            var employeeEmail = user.Employee?.EmailAddress;
+            if (string.IsNullOrWhiteSpace(employeeEmail) && user.UserName?.Contains('@') == true)
+                employeeEmail = user.UserName;
+            employeeEmail ??= string.Empty;
             var userTypeDescription = user.UserType?.UserTypeDesc ?? string.Empty;
             var mustChangePasswordOnFirstLogin = user.MustChangePasswordOnFirstLogin;
 
@@ -377,11 +414,11 @@ namespace MinDAES.Api.Controllers
                 return Unauthorized("No refresh token provided.");
             }
 
-            var user = await _minDAEsDbContext.Users
-                .Include(u => u.UserType)  // Ensure UserType is included
-                .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken && u.RefreshTokenExpiryTime > DateTime.UtcNow);
+            var user = await LoadUserForTokenAsync(
+                u => u.RefreshToken == refreshToken && u.RefreshTokenExpiryTime > DateTime.UtcNow);
 
-            if (user == null)
+            // A deactivated account must not keep getting new access tokens.
+            if (user == null || !user.IsActive)
             {
                 return Unauthorized("Invalid or expired refresh token.");
             }
