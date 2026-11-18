@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MinDAES.Api.Data;
+using MinDAES.Api.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,9 @@ builder.Services.AddDbContext<MinDAESDbContext>(x =>
         sql.UseCompatibilityLevel(100);
     });
 });
+
+builder.Services.Configure<GmailOptions>(builder.Configuration.GetSection("Gmail"));
+builder.Services.AddSingleton<IEmailSender, GmailEmailSender>();
 
 // adding service for authentication
 builder.Services.AddAuthentication(options =>

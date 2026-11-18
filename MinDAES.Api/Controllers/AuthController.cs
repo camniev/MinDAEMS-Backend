@@ -28,11 +28,13 @@ namespace MinDAES.Api.Controllers
         private readonly MinDAESDbContext _minDAEsDbContext;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        public AuthController(MinDAESDbContext minDAEsDbContext, IConfiguration configuration, IWebHostEnvironment webHostEnvironment)
+        private readonly IEmailSender _emailSender;
+        public AuthController(MinDAESDbContext minDAEsDbContext, IConfiguration configuration, IWebHostEnvironment webHostEnvironment, IEmailSender emailSender)
         {
             _minDAEsDbContext = minDAEsDbContext;
             _configuration = configuration;
             _webHostEnvironment = webHostEnvironment;
+            _emailSender = emailSender;
         }
 
         // THE root cause of "Unknown" names and empty emails after a refresh: Login loaded the
@@ -431,15 +433,13 @@ namespace MinDAES.Api.Controllers
 
         // TEST EMAIL
         [HttpPost("send-test-email")]
-        public IActionResult SendTestEmail()
+        public async Task<IActionResult> SendTestEmail()
         {
-            string email = "cameron.nieve@minda.gov.ph";
-            string applicantCode = "DMO_I_KMD_0001";
-            string subject = "Test Email from MinDAEMS";
-            string emailBody = GenerateEmailBodyForPasswordUpdate(email, applicantCode);
+            var email = "cameron.nieve@minda.gov.ph";
             try
             {
-                GmailSender.SendEmail(email, subject, emailBody, _webHostEnvironment);
+                await _emailSender.SendAsync(email, "Test Email from MinDAEMS",
+                    GenerateEmailBodyForPasswordUpdate(email, "DMO_I_KMD_0001"));
                 return Ok(new { message = "Test email sent successfully." });
             }
             catch (Exception ex)
