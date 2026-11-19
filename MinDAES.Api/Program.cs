@@ -31,6 +31,8 @@ builder.Services.AddDbContext<MinDAESDbContext>(x =>
 
 builder.Services.Configure<GmailOptions>(builder.Configuration.GetSection("Gmail"));
 builder.Services.AddSingleton<IEmailSender, GmailEmailSender>();
+builder.Services.AddSingleton<EmailQueue>();
+builder.Services.AddHostedService<EmailBackgroundService>();
 
 // adding service for authentication
 builder.Services.AddAuthentication(options =>

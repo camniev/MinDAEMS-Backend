@@ -1,0 +1,2 @@
+wwwroot\uploads\google\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json
+wwwroot\uploads\google\token\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json

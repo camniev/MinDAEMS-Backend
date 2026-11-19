@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "vaulted-botany-515206-b2",
+  "private_key_id": "e5fe157a3aaa41b3b175c66262ad9d151caee39a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC1ZoGtvzlc0Gts\nvx/FftD5xGIROrfVQD1lpWNm2LBB+JjOOGZLG/JPh4B3DzBffj1Bosp7T88hblPi\nLTY0kZ5LCOjoPGkCaNCUP9URRw56m8tjo7pR3pRHIr0aIChAiTa+W5p9qOiCILsR\nZ7Bx16/jmEOdw3OLTqPRCN1sqGIRDiUh8tRXDt7TlxMoIQCCfkT9JSezXRB/2Pe1\nM1wtcSIoVcCC0SHB/HubbemP76XRsjT3JAUQD0P8u/tiR4JZ8UQPpv74JN6fORTY\n+/W82ugeNAHOoac6AVyK5mWXbK84rIuQkY843SY7V46ZZam23M59xOvZMt55TQhc\nQvaTNIu5AgMBAAECggEADrw1f1MyehaIYg8cv1VNF+Y1hMqahBUsYkKe8mEv4M1X\nFPSnYzqxV6JSk46gDQ3AikGf8DLcM44WUcp+5ffIiOCqfLJANxzOXqXYbVzH3A/7\njkvj4W0dadw0Sg2VKiLgl8dx+KWnwhRIZdegpqq7hAHKck5eEdGbmdS+GdVhZpr2\nouJNu12kPLlNdmdsF9eV07Wy4XzmUDdidutS6Qxcb4epUyFvFHsKCApy/ZmRoXNA\ni1Iy8E1TQAI0vp+4EbQ7gJXkMiUL8WPpc0w0yAHGpe0GIydADw4IpLk+RPWSebHX\nUieVW6TO5Zn20FSyv7k49WilgYcU1J0/bcgpXkkq9QKBgQDsQEhm6Pi8zFzFu+YB\nORyTmXxSOXR1IgfINGTuoK22/E3Bgi65DZIihF0oJwiP7PjJfqddTSve2N0tOaoi\nzbVK8kUoO2WsCbn/zwvzBxahB6TuiaoWbL4S7XFDIH8tKPG8AGahzL+h1rw0n7cj\nSrpriIVz/6Q0HPn90GM0H2v/DQKBgQDEkG6e3UBzB+EHwOUPbGezJXbuKQ4rSsG8\nlBZ3wjdOqT5Ulb0TXWYMLXq3OIX8JT1nxbp85hyrVh/S8pPkAGqLWdFZYutEFT6z\nO+Syt7ILf1uzy1qoFvkgYBUyET7YCKdSie7RIr2+ftyL9eXzWWrf0/ZHSOFvgvy/\n1yOqHUN0XQKBgGvoWKmYk7Q4a89tKXs5iNHp8xzjXUv7BS7ur4NHJNFFoIZYXdrs\nVekqKBqk6YZDqMbv8KXvD7CzwSJdClbnOn1G90uPBbt0nd43xa91d2KJyU2i12ty\ns8aVaXxNpYkNAIzsafRRPt4+5Kvsn4uhIFDphHsdMvUSnyTNP+KYz40pAoGALC97\nbmK19iWzRBbsZscrmG23ilnYQYsQed+gHVOfMyOAS2tNkWjRY7NlfoJKPB/y6bzc\n6u6fSzSU+spkzD/7s0+Ba+J8mFVePtQb2MDKWSNL7eKsglSHs+tlWFfgFJf9ZOR0\ntrZkiMnjseKYylczWxU+q0+KvZJoVod6EOd7HlECgYBnZpaI7giaMqrbIBQPF9Z4\nQj2CCUISBxmiJWNYfabwnhFmrwnk6WGH+G2ToEdLshFnZgxqSkrOmkNN32y4CUJG\nb/4BmFoFqurtP2HZKMt1vVtkm2jgz2kOSPn4e+Dmu4xEU32NZpi7sNWcVbMARnMX\nD1LyGsdxidXJnsW5wekcxg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "minda-mailer@vaulted-botany-515206-b2.iam.gserviceaccount.com",
+  "client_id": "113115441083899479884",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/minda-mailer%40vaulted-botany-515206-b2.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

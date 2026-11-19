@@ -220,6 +220,32 @@
   },
   {
     "ContainingType": "MinDAES.Api.Controllers.AuthController",
+    "Method": "ResendApplicantInvite",
+    "RelativePath": "api/Auth/ResendApplicantInvite/{examEnrollmentId}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examEnrollmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.AuthController",
+    "Method": "SendTestEmail",
+    "RelativePath": "api/Auth/send-test-email",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.AuthController",
     "Method": "UpdatePasswordOnFirstLogin",
     "RelativePath": "api/Auth/UpdatePasswordOnFirstLogin",
     "HttpMethod": "PUT",
