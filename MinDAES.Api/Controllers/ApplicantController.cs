@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MinDAES.Api.Data;
 using MinDAES.Api.Domain.DTOs;
@@ -16,9 +17,11 @@ namespace MinDAES.Api.Controllers
     public class ApplicantController : ControllerBase
     {
         private readonly MinDAESDbContext _mindaEsDbContext;
-        public ApplicantController(MinDAESDbContext mindaEsDbContext)
+        private readonly IHubContext<NotificationHub> _hubContext;
+        public ApplicantController(MinDAESDbContext mindaEsDbContext, IHubContext<NotificationHub> hubContext)
         {
             _mindaEsDbContext = mindaEsDbContext;
+            _hubContext = hubContext;
         }
 
         // add applicants
@@ -246,6 +249,67 @@ namespace MinDAES.Api.Controllers
                 .ToList();
 
             return Ok(result);
+        }
+
+        // POST api/Applicant/MyExam/{enrollmentId}/Events
+        [Authorize(Roles = ApplicantRole)]
+        [HttpPost("MyExam/{enrollmentId:guid}/Events")]
+        public async Task<IActionResult> ReportExamEvent(Guid enrollmentId, [FromBody] ExamEventRequest? body)
+        {
+            var email = CurrentApplicantEmail();
+            if (email == null) return NoEmailOnAccount();
+
+            if (body?.Type == null || !ExamIncidentAlert.AllowedTypes.Contains(body.Type))
+                return BadRequest(new { message = "Unknown event type." });
+
+            // Same "is this my enrollment" rule as FindOwnedEnrollmentAsync, without loading the
+            // whole question set on every event.
+            var en = await _mindaEsDbContext.ExamEnrollments
+                .Include(e => e.Exam)
+                .Include(e => e.Applicant)
+                .FirstOrDefaultAsync(e => e.ExamEnrollmentId == enrollmentId
+                                        && e.Applicant != null
+                                        && e.Applicant.Email.ToLower() == email);
+            if (en?.Exam == null || en.Applicant == null)
+                return NotFound(new { message = "Exam enrollment not found." });
+
+            // Only while the attempt is actually in progress.
+            if (en.StartedAt == null || en.SubmittedAt != null)
+                return Conflict(new { message = "This exam is not in progress." });
+
+            var now = TimeHelper.GetPhilippineTime();
+
+            // A misbehaving page (or someone calling the API by hand) must not flood the proctors.
+            var recent = await _mindaEsDbContext.Set<ExamIncident>()
+                .CountAsync(i => i.ExamEnrollmentId == enrollmentId && i.OccurredAt >= now.AddMinutes(-10));
+            if (recent >= 120)
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many events." });
+
+            var incident = new ExamIncident
+            {
+                ExamEnrollmentId = enrollmentId,
+                Type = body.Type,
+                AwaySeconds = body.AwaySeconds is >= 0 and <= 86_400 ? body.AwaySeconds : null,
+                OccurredAt = now
+            };
+            _mindaEsDbContext.Set<ExamIncident>().Add(incident);
+            await _mindaEsDbContext.SaveChangesAsync();
+
+            // Live push to every logged-in staff member. A hub hiccup must not fail the report,
+            // which is already saved.
+            try
+            {
+                await _hubContext.Clients.Group(NotificationHub.ProctorsGroup).SendAsync("ReceiveNotification",
+                    new ExamIncidentAlert("ExamIncident", incident.Id, en.ExamId, en.Exam.ExamTitle, en.ExamEnrollmentId,
+                        en.ApplicantCode, en.Applicant.FullName, incident.Type,
+                        ExamIncidentAlert.SeverityOf(incident.Type), incident.AwaySeconds, incident.OccurredAt));
+            }
+            catch (Exception)
+            {
+                // log it; the incident is in the database and shows up in the proctor's history
+            }
+
+            return NoContent();
         }
 
         // GET api/Applicant/MyExam/{enrollmentId}/Attachments/{attachmentId}

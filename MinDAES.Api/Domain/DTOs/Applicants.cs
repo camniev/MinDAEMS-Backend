@@ -45,4 +45,10 @@ namespace MinDAES.Api.Domain.DTOs
         public string EnrollmentStatus { get; set; } = string.Empty; // this applicant's own roster status
         public decimal? Score { get; set; } // this applicant's own score only
     }
+
+    public class ExamEventRequest
+    {
+        public string? Type { get; set; }
+        public int? AwaySeconds { get; set; }
+    }
 }
