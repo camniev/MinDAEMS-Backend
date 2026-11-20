@@ -23,3 +23,9 @@ public class GradeRequest
     public bool Finalize { get; set; }
     public List<MarkDto> Marks { get; set; } = new();
 }
+
+public class PrintRequest
+{
+    // Empty / missing = every submitted enrollment of the exam.
+    public List<Guid>? ExamEnrollmentIds { get; set; }
+}

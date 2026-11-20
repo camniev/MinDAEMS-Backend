@@ -2,12 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MinDAES.Api.Data;
 using MinDAES.Api.Domain.Entities;
+using MinDAES.Api.Helpers;
 using MinDAES.Api.Domain.Enums;
 
 // ASSUMPTIONS — adjust to your project (I haven't seen these):
-//   * the DbContext type is MinDAEsDbContext (use whatever your other controllers inject)
-//   * QuestionType has a member named Essay; the "type" string sent to the UI must match
-//     what GetExamSchedules already sends (the UI checks for 'essay' and 'checkbox')
+//   * QuestionType has a member named Essay (ExamAttemptRules.ToClientType maps it to the
+//     'essay' / 'checkbox' strings the UI checks for)
 //   * EssayHtml is the helper from EssayHtml.cs (used here to detect an empty essay)
 // TODO: protect the whole controller, e.g. [Authorize(Roles = "...")]. It exposes the
 //       answer key and changes grades.
@@ -18,22 +18,25 @@ namespace MinDAES.Api.Controllers
     [Route("api/[controller]")]
     public class GradingController : ControllerBase
     {
-        private readonly MinDAESDbContext _minDAESDbContext;
+        private readonly MinDAESDbContext _db;
 
-        public GradingController(MinDAESDbContext minDAESDbContext) => _minDAESDbContext = minDAESDbContext;
+        public GradingController(MinDAESDbContext db) => _db = db;
 
-        private static string TypeName(QuestionType t) => t.ToString().ToLowerInvariant();
+        private const int MaxPrintBatch = 200; // one print job; keeps the page and the response manageable
+
+        // Same mapping the applicant exam page already uses, so both screens agree on type names.
+        private static string TypeName(QuestionType t) => ExamAttemptRules.ToClientType(t);
 
         // GET api/Grading/{examId}/Roster
         [HttpGet("{examId:guid}/Roster")]
         public async Task<ActionResult> GetRoster(Guid examId)
         {
-            var exam = await _minDAESDbContext.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.ExamId == examId);
+            var exam = await _db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.ExamId == examId);
             if (exam == null)
                 return NotFound(new { message = "Exam schedule not found." });
 
             // Enum -> string is done after the query so the SQL translation stays simple.
-            var rows = await _minDAESDbContext.Set<ExamEnrollment>().AsNoTracking()
+            var rows = await _db.Set<ExamEnrollment>().AsNoTracking()
                 .Where(en => en.ExamId == examId)
                 .OrderBy(en => en.Applicant!.FullName)
                 .Select(en => new
@@ -59,7 +62,7 @@ namespace MinDAES.Api.Controllers
         [HttpGet("Enrollments/{enrollmentId:guid}")]
         public async Task<ActionResult> GetSubmission(Guid enrollmentId)
         {
-            var en = await _minDAESDbContext.Set<ExamEnrollment>().AsNoTracking()
+            var en = await _db.Set<ExamEnrollment>().AsNoTracking()
                 .Include(e => e.Applicant)
                 .Include(e => e.Exam).ThenInclude(x => x!.Questions).ThenInclude(q => q.Options)
                 .Include(e => e.Answers).ThenInclude(a => a.SelectedOptions)
@@ -109,7 +112,7 @@ namespace MinDAES.Api.Controllers
             if (request == null)
                 return BadRequest(new { message = "Request body is required." });
 
-            var en = await _minDAESDbContext.Set<ExamEnrollment>()
+            var en = await _db.Set<ExamEnrollment>()
                 .Include(e => e.Exam).ThenInclude(x => x!.Questions).ThenInclude(q => q.Options)
                 .Include(e => e.Answers).ThenInclude(a => a.SelectedOptions)
                 .AsSplitQuery()
@@ -130,7 +133,7 @@ namespace MinDAES.Api.Controllers
             if (marks.Keys.Any(id => !questions.ContainsKey(id)))
                 return BadRequest(new { message = "A mark refers to a question that is not in this exam." });
 
-            await using var transaction = await _minDAESDbContext.Database.BeginTransactionAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync();
             try
             {
                 foreach (var a in en.Answers)
@@ -164,7 +167,7 @@ namespace MinDAES.Api.Controllers
                         : 0m;
                 }
 
-                await _minDAESDbContext.SaveChangesAsync();
+                await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return Ok(new
@@ -179,6 +182,78 @@ namespace MinDAES.Api.Controllers
                 await transaction.RollbackAsync();
                 return StatusCode(500, new { message = "Error saving grades", error = ex.Message });
             }
+        }
+
+        // POST api/Grading/{examId}/PrintData
+        // Everything the print view needs, for one or many applicants of ONE exam. The questions
+        // are sent once, the answers once per applicant. Deliberately NOT included: the answer
+        // key (IsCorrect), awarded points, and each applicant's name/email — printouts show only
+        // the applicant code, position applied for and exam date. Only submitted attempts are
+        // returned (the rest are counted in "skipped").
+        //
+        // Needs ExamEnrollment.PositionAppliedFor (string?, nullable). Add to ExamEnrollment.cs:
+        //     [Column("PositionAppliedFor")] [MaxLength(100)]
+        //     public string? PositionAppliedFor { get; set; }
+        // then: dotnet ef migrations add AddPositionAppliedFor
+        [HttpPost("{examId:guid}/PrintData")]
+        public async Task<ActionResult> GetPrintData(Guid examId, [FromBody] PrintRequest? request)
+        {
+            Console.WriteLine($"GetPrintData called for exam {examId}, request: {request?.ExamEnrollmentIds?.Count ?? 0} applicants");
+            var exam = await _db.Exams.AsNoTracking()
+                .Include(e => e.Questions).ThenInclude(q => q.Options)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(e => e.ExamId == examId);
+            if (exam == null)
+                return NotFound(new { message = "Exam schedule not found." });
+
+            var ids = request?.ExamEnrollmentIds ?? new List<Guid>();
+
+            var enrollmentsQuery = _db.Set<ExamEnrollment>().AsNoTracking()
+                .Where(en => en.ExamId == examId);
+            if (ids.Count > 0)
+                enrollmentsQuery = enrollmentsQuery.Where(en => ids.Contains(en.ExamEnrollmentId));
+
+            var enrollments = await enrollmentsQuery
+                .Include(en => en.Answers).ThenInclude(a => a.SelectedOptions)
+                .AsSplitQuery()
+                .OrderBy(en => en.ApplicantCode) // a predictable order for sorting the stack of printouts
+                .ToListAsync();
+
+            var submitted = enrollments.Where(en => en.SubmittedAt != null).ToList();
+            if (submitted.Count > MaxPrintBatch)
+                return BadRequest(new { message = $"Print at most {MaxPrintBatch} applicants at a time." });
+
+            return Ok(new
+            {
+                examTitle = exam.ExamTitle,
+                examDate = exam.ExamDate.ToString("yyyy-MM-dd"),
+                questions = exam.Questions
+                    .OrderBy(q => q.OrderIndex)
+                    .Select(q => new
+                    {
+                        id = q.QuestionId,
+                        type = TypeName(q.Type),
+                        text = q.Text,
+                        points = q.Points,
+                        orderIndex = q.OrderIndex,
+                        options = q.Options
+                            .OrderBy(o => o.OrderIndex)
+                            .Select(o => new { id = o.QuestionOptionId, text = o.Text, orderIndex = o.OrderIndex })
+                    }),
+                submissions = submitted.Select(en => new
+                {
+                    examEnrollmentId = en.ExamEnrollmentId,
+                    applicantCode = en.ApplicantCode,
+                    positionAppliedFor = exam.ExamTitle,
+                    answers = en.Answers.Select(a => new
+                    {
+                        questionId = a.QuestionId,
+                        essayText = a.EssayText,
+                        selectedOptionIds = a.SelectedOptions.Select(s => s.QuestionOptionId)
+                    })
+                }),
+                skipped = enrollments.Count - submitted.Count
+            });
         }
 
         // Objective questions: full points only for an exact match with the answer key.

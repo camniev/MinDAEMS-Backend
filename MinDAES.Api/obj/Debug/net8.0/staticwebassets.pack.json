@@ -1,6 +1,10 @@
 {
   "Files": [
     {
+      "Id": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "PackagePath": "staticwebassets/uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"
+    },
+    {
       "Id": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
       "PackagePath": "staticwebassets/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"
     },

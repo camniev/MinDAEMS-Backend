@@ -1,1 +1,58 @@
-{"Version":1,"Hash":"qeDgGKIc0SWcTliQZ3y8inVeMTrjFJRVJmo1TdFtw3Y=","Source":"MinDAES.Api","BasePath":"_content/MinDAES.Api","Mode":"Default","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[{"Name":"MinDAES.Api\\wwwroot","Source":"MinDAES.Api","ContentRoot":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\","BasePath":"_content/MinDAES.Api","Pattern":"**"}],"Assets":[{"Identity":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\uploads\\google\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","SourceId":"MinDAES.Api","SourceType":"Discovered","ContentRoot":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\","BasePath":"_content/MinDAES.Api","RelativePath":"uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com#[.{fingerprint}]?.json","AssetKind":"All","AssetMode":"All","AssetRole":"Primary","AssetMergeBehavior":"","AssetMergeSource":"","RelatedAsset":"","AssetTraitName":"","AssetTraitValue":"","Fingerprint":"e72sqr3rni","Integrity":"1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA=","CopyToOutputDirectory":"Never","CopyToPublishDirectory":"PreserveNewest","OriginalItemSpec":"wwwroot\\uploads\\google\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","FileLength":410,"LastWriteTime":"2026-11-18T07:53:34+00:00"},{"Identity":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\uploads\\google\\token\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","SourceId":"MinDAES.Api","SourceType":"Discovered","ContentRoot":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\","BasePath":"_content/MinDAES.Api","RelativePath":"uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com#[.{fingerprint}]?.json","AssetKind":"All","AssetMode":"All","AssetRole":"Primary","AssetMergeBehavior":"","AssetMergeSource":"","RelatedAsset":"","AssetTraitName":"","AssetTraitValue":"","Fingerprint":"e72sqr3rni","Integrity":"1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA=","CopyToOutputDirectory":"Never","CopyToPublishDirectory":"PreserveNewest","OriginalItemSpec":"wwwroot\\uploads\\google\\token\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","FileLength":410,"LastWriteTime":"2026-11-18T07:53:34+00:00"}],"Endpoints":[{"Route":"uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.e72sqr3rni.json","AssetFile":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\uploads\\google\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","Selectors":[],"ResponseHeaders":[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Content-Length","Value":"410"},{"Name":"Content-Type","Value":"application/json"},{"Name":"ETag","Value":"\"1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA=\""},{"Name":"Last-Modified","Value":"Wed, 18 Nov 2026 07:53:34 GMT"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"}],"EndpointProperties":[{"Name":"fingerprint","Value":"e72sqr3rni"},{"Name":"label","Value":"uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"},{"Name":"integrity","Value":"sha256-1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA="}]},{"Route":"uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","AssetFile":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\uploads\\google\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","Selectors":[],"ResponseHeaders":[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Content-Length","Value":"410"},{"Name":"Content-Type","Value":"application/json"},{"Name":"ETag","Value":"\"1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA=\""},{"Name":"Last-Modified","Value":"Wed, 18 Nov 2026 07:53:34 GMT"},{"Name":"Cache-Control","Value":"no-cache"}],"EndpointProperties":[{"Name":"integrity","Value":"sha256-1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA="}]},{"Route":"uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.e72sqr3rni.json","AssetFile":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\uploads\\google\\token\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","Selectors":[],"ResponseHeaders":[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Content-Length","Value":"410"},{"Name":"Content-Type","Value":"application/json"},{"Name":"ETag","Value":"\"1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA=\""},{"Name":"Last-Modified","Value":"Wed, 18 Nov 2026 07:53:34 GMT"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"}],"EndpointProperties":[{"Name":"fingerprint","Value":"e72sqr3rni"},{"Name":"label","Value":"uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"},{"Name":"integrity","Value":"sha256-1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA="}]},{"Route":"uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","AssetFile":"C:\\Users\\cbnieve\\Documents\\Actual Projects\\MinDAES\\MinDAES.Api\\MinDAES.Api\\wwwroot\\uploads\\google\\token\\client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json","Selectors":[],"ResponseHeaders":[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Content-Length","Value":"410"},{"Name":"Content-Type","Value":"application/json"},{"Name":"ETag","Value":"\"1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA=\""},{"Name":"Last-Modified","Value":"Wed, 18 Nov 2026 07:53:34 GMT"},{"Name":"Cache-Control","Value":"no-cache"}],"EndpointProperties":[{"Name":"integrity","Value":"sha256-1m/lsTG/Tjmcl9zwrEx6ox9BqTHP7DUxbmYFP6Zn2lA="}]}]}
+{
+  "Version": 1,
+  "Hash": "pP+k+/B07GzKgu1B2VVctiaRRbxq26kwxqvioJ0iMss=",
+  "Source": "MinDAES.Api",
+  "BasePath": "_content/MinDAES.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "MinDAES.Api/wwwroot",
+      "Source": "MinDAES.Api",
+      "ContentRoot": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/",
+      "BasePath": "_content/MinDAES.Api",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "SourceId": "MinDAES.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/",
+      "BasePath": "_content/MinDAES.Api",
+      "RelativePath": "uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/uploads/google/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"
+    },
+    {
+      "Identity": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "SourceId": "MinDAES.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/wwwroot/",
+      "BasePath": "_content/MinDAES.Api",
+      "RelativePath": "uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/uploads/google/token/client_secret_1017921278385-hcbkhhoh2eivcn7valscob88sv4d5r0d.apps.googleusercontent.com.json"
+    }
+  ]
+}
