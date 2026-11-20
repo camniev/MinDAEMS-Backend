@@ -317,3 +317,14 @@ C:/Users/cbnieve/Documents/Actual Projects/MinDAES/MinDAES.Api/MinDAES.Api/bin/D
 C:/Users/cbnieve/Documents/Actual Projects/MinDAES/MinDAES.Api/MinDAES.Api/bin/Debug/net8.0/runtimes/win/lib/net8.0/System.Security.Cryptography.Pkcs.dll
 C:/Users/cbnieve/Documents/Actual Projects/MinDAES/MinDAES.Api/MinDAES.Api/bin/Debug/net8.0/App_Data/google/vaulted-botany-515206-b2-e5fe157a3aaa.json
 /Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/App_Data/google/vaulted-botany-515206-b2-e5fe157a3aaa.json
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.Connections.Abstractions.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.Http.Connections.Client.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.Http.Connections.Common.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.SignalR.Client.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.SignalR.Client.Core.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.SignalR.Common.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.AspNetCore.SignalR.Protocols.Json.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.Extensions.Features.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.Extensions.Logging.Abstractions.dll
+/Users/cameronnieve/Documents/Actual-Projects/MinDAEMS/Back-end/MinDAES.Api/bin/Debug/net8.0/Microsoft.Extensions.Options.dll

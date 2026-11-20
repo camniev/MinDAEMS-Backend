@@ -33,6 +33,7 @@ builder.Services.Configure<GmailOptions>(builder.Configuration.GetSection("Gmail
 builder.Services.AddSingleton<IEmailSender, GmailEmailSender>();
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddHostedService<EmailBackgroundService>();
+builder.Services.AddSignalR();
 
 // adding service for authentication
 builder.Services.AddAuthentication(options =>
@@ -96,6 +97,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors("mindaesAppCors");
 
 app.UseAuthorization();
+
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.MapControllers();
 
