@@ -78,6 +78,10 @@ namespace MinDAES.Api.Data
                 .WithMany()
                 .HasForeignKey(o => o.QuestionOptionId)
                 .OnDelete(DeleteBehavior.Restrict);
+            
+            modelBuilder.Entity<ExamEnrollment>()
+                .HasIndex(e => new { e.ExamId, e.ApplicantCode })
+                .IsUnique();
         }
     }
 }

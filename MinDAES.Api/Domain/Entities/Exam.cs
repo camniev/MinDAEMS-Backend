@@ -64,6 +64,10 @@ namespace MinDAES.Api.Domain.Entities
         [Column("ArchivedByUserId")]
         public Guid? ArchivedByUserId { get; set; }
 
+        [Column("LastApplicantSerial")]
+        [ConcurrencyCheck]
+        public int LastApplicantSerial { get; set; }
+
         public ICollection<ExamAttachment> Attachments { get; set; } = new List<ExamAttachment>();
 
         public ICollection<Question> Questions { get; set; } = new List<Question>();

@@ -190,6 +190,11 @@ namespace MinDAES.Api.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("IsArchived");
 
+                    b.Property<int>("LastApplicantSerial")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int")
+                        .HasColumnName("LastApplicantSerial");
+
                     b.Property<int>("PassingScore")
                         .HasColumnType("int")
                         .HasColumnName("PassingScore");
@@ -259,7 +264,7 @@ namespace MinDAES.Api.Migrations
 
                     b.Property<string>("ApplicantCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("nvarchar(450)")
                         .HasColumnName("ApplicantCode");
 
                     b.Property<Guid>("ApplicantId")
@@ -293,7 +298,8 @@ namespace MinDAES.Api.Migrations
 
                     b.HasIndex("ApplicantId");
 
-                    b.HasIndex("ExamId");
+                    b.HasIndex("ExamId", "ApplicantCode")
+                        .IsUnique();
 
                     b.ToTable("EXAM_ENROLLMENTS");
                 });

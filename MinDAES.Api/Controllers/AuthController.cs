@@ -31,13 +31,15 @@ namespace MinDAES.Api.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IEmailSender _emailSender;
         private readonly EmailQueue _emailQueue;
-        public AuthController(MinDAESDbContext minDAEsDbContext, IConfiguration configuration, IWebHostEnvironment webHostEnvironment, IEmailSender emailSender, EmailQueue emailQueue)
+        private readonly ApplicantAccountService _accounts;
+        public AuthController(MinDAESDbContext minDAEsDbContext, IConfiguration configuration, IWebHostEnvironment webHostEnvironment, IEmailSender emailSender, EmailQueue emailQueue, ApplicantAccountService accounts)
         {
             _minDAEsDbContext = minDAEsDbContext;
             _configuration = configuration;
             _webHostEnvironment = webHostEnvironment;
             _emailSender = emailSender;
             _emailQueue = emailQueue;
+            _accounts = accounts;
         }
 
         // THE root cause of "Unknown" names and empty emails after a refresh: Login loaded the
@@ -96,87 +98,6 @@ namespace MinDAES.Api.Controllers
             await _minDAEsDbContext.SaveChangesAsync();
 
             return Ok(new { message = "User added successfully.", UserId = user.UserId });
-        }
-
-        //[HttpPost("RegisterApplicants")]
-        //public async Task<ActionResult> RegisterApplicants([FromBody] RegisterApplicantsRequest model)
-        //{
-        //    if (model?.Applicants == null || model.Applicants.Count == 0)
-        //        return BadRequest("At least one applicant is required.");
-
-        //    var invalid = model.Applicants
-        //        .Where(a => string.IsNullOrWhiteSpace(a.Name)
-        //                 || string.IsNullOrWhiteSpace(a.Email)
-        //                 || string.IsNullOrWhiteSpace(a.ApplicantCode))
-        //        .ToList();
-        //    if (invalid.Count > 0)
-        //        return BadRequest("Every applicant needs a name, an email and an applicant code.");
-
-        //    //if (!Guid.TryParse(_configuration["Auth:ApplicantUserTypeId"], out var applicantUserTypeId))
-        //    //    return StatusCode(500, "Applicant user type is not configured (Auth:ApplicantUserTypeId).");
-
-        //    var applicantUserTypeId = await _minDAEsDbContext.UserTypes
-        //        .Where(ut => ut.UserTypeDesc == "Applicant")
-        //        .Select(ut => (Guid?)ut.UserTypeId)
-        //        .SingleOrDefaultAsync();
-
-        //    if (applicantUserTypeId == null)
-        //        return StatusCode(500, "The 'Applicant' user type was not found.");
-
-        //    try
-        //    {
-        //        var (created, existing) = await EnsureApplicantAccountsAsync(model.Applicants, applicantUserTypeId.Value);
-        //        return Ok(new
-        //        {
-        //            created,
-        //            alreadyExisted = existing,
-        //            message = $"{created} account(s) created, {existing} already existed."
-        //        });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = "Error creating applicant accounts", error = ex.Message });
-        //    }
-        //}
-
-        // POST api/Auth/RegisterApplicants
-        // Creates an Employee + User for each applicant that doesn't have an account yet, then queues
-        // each NEW applicant's login-details email. Safe to call repeatedly: an email that already has
-        // an account is skipped, never overwritten, and gets no email (use Resend for those).
-        [HttpPost("RegisterApplicants")]
-        public async Task<ActionResult> RegisterApplicants([FromBody] RegisterApplicantsRequest model)
-        {
-            if (model?.Applicants == null || model.Applicants.Count == 0)
-                return BadRequest("At least one applicant is required.");
-
-            var invalid = model.Applicants
-                .Where(a => string.IsNullOrWhiteSpace(a.Name)
-                         || string.IsNullOrWhiteSpace(a.Email)
-                         || string.IsNullOrWhiteSpace(a.ApplicantCode))
-                .ToList();
-            if (invalid.Count > 0)
-                return BadRequest("Every applicant needs a name, an email and an applicant code.");
-
-            var applicantUserTypeId = await GetApplicantUserTypeIdAsync();
-            if (applicantUserTypeId == null)
-                return StatusCode(500, "The 'Applicant' user type was not found.");
-
-            try
-            {
-                var (created, existing) = await EnsureApplicantAccountsAsync(
-                    model.Applicants, applicantUserTypeId.Value, queueEmails: true);
-                return Ok(new
-                {
-                    created,
-                    alreadyExisted = existing,
-                    emailsQueued = created,
-                    message = $"{created} account(s) created, {existing} already existed."
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error creating applicant accounts", error = ex.Message });
-            }
         }
 
         [HttpPut("UpdateUser")]
@@ -444,81 +365,6 @@ namespace MinDAES.Api.Controllers
 
         private string HeaderImageUrl() => _configuration["Email:HeaderImageUrl"] ?? string.Empty;
 
-        // Creates the missing accounts, then (optionally) queues one email per NEW account.
-        private async Task<(int created, int existing)> EnsureApplicantAccountsAsync(
-            IEnumerable<ApplicantAccountDto> applicants, Guid applicantUserTypeId, bool queueEmails)
-        {
-            // One entry per email, even if the request lists someone twice.
-            var wanted = applicants
-                .GroupBy(a => a.Email!.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.First())
-                .ToList();
-
-            var emails = wanted.Select(a => a.Email!.Trim()).ToList();
-            var taken = (await _minDAEsDbContext.Users
-                    .Where(u => emails.Contains(u.UserName))
-                    .Select(u => u.UserName)
-                    .ToListAsync())
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var createdApplicants = new List<(string Email, string Code)>();
-            foreach (var a in wanted)
-            {
-                var email = a.Email!.Trim();
-                if (taken.Contains(email)) continue;
-
-                var code = a.ApplicantCode!.Trim();
-                var employee = new Employee
-                {
-                    EmpId = Guid.NewGuid(),
-                    EmpName = a.Name!.Trim(),
-                    Position = "Applicant",
-                    EmailAddress = email,
-                    IsActive = true
-                };
-
-                var user = new User
-                {
-                    UserId = Guid.NewGuid(),
-                    UserName = email,
-                    UserTypeId = applicantUserTypeId,
-                    IsActive = true,
-                    EmpId = employee.EmpId,
-                    Employee = employee,
-                    DatePasswordLastSet = TimeHelper.GetPhilippineTime(),
-                    // The applicant code IS the credential given to the applicant, so there is nothing
-                    // to force them to change. It is also hashed (Register stores it as plain text when
-                    // this flag is true).
-                    MustChangePasswordOnFirstLogin = false,
-                    PassWord = PasswordHasher.HashPassword(code)
-                };
-
-                _minDAEsDbContext.Employees.Add(employee);
-                _minDAEsDbContext.Users.Add(user);
-                createdApplicants.Add((email, code));
-            }
-
-            // One SaveChanges = one transaction: either every new account is saved or none is.
-            if (createdApplicants.Count > 0) await _minDAEsDbContext.SaveChangesAsync();
-
-            // Only AFTER the accounts are saved, so nobody is emailed login details for an account that
-            // doesn't exist. Queued, not sent here: a failed email must not undo (or slow down) enrollment.
-            if (queueEmails && createdApplicants.Count > 0)
-            {
-                var loginUrl = LoginUrl();
-                var imageUrl = HeaderImageUrl();
-                foreach (var (email, code) in createdApplicants)
-                {
-                    await _emailQueue.EnqueueAsync(new EmailJob(
-                        email,
-                        ApplicantEmailTemplate.Subject,
-                        ApplicantEmailTemplate.Credentials(email, code, loginUrl, imageUrl, isResend: false)));
-                }
-            }
-
-            return (createdApplicants.Count, wanted.Count - createdApplicants.Count);
-        }
-
         // POST api/Auth/ResendApplicantInvite/{examEnrollmentId}
         // The Send button on the Applicants screen. Makes sure the account exists, makes the applicant
         // code from THIS enrollment the account's working password, and emails it. The result is
@@ -531,63 +377,52 @@ namespace MinDAES.Api.Controllers
                 .Include(e => e.Applicant)
                 .Include(e => e.Exam)
                 .FirstOrDefaultAsync(e => e.ExamEnrollmentId == examEnrollmentId);
-
+        
             if (en?.Applicant == null || en.Exam == null)
                 return NotFound(new { message = "Enrollment not found." });
-
-            // Accounts are removed when an exam closes, so there is nothing to send for a closed one.
+        
+            // Logins are removed when an exam closes, so there is nothing to send for a closed one.
             if (en.Exam.IsArchived || (en.Exam.Status != ExamStatus.Upcoming && en.Exam.Status != ExamStatus.Ongoing))
                 return Conflict(new { message = "Login details can only be sent for an upcoming or ongoing exam." });
-
+        
             var email = en.Applicant.Email?.Trim();
             var code = en.ApplicantCode?.Trim();
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
                 return Conflict(new { message = "This applicant has no email address or applicant code." });
-
-            var applicantUserTypeId = await GetApplicantUserTypeIdAsync();
-            if (applicantUserTypeId == null)
+        
+            var applicantTypeId = await _accounts.GetApplicantUserTypeIdAsync();
+            if (applicantTypeId == null)
                 return StatusCode(500, new { message = "The 'Applicant' user type was not found." });
-
+        
             try
             {
-                var dto = new ApplicantAccountDto { Name = en.Applicant.FullName, Email = email, ApplicantCode = code };
-
-                // Creates the account if it's missing (this also backfills enrollments made before
-                // accounts existed). queueEmails: false because we send one email ourselves below.
-                var (created, _) = await EnsureApplicantAccountsAsync(new[] { dto }, applicantUserTypeId.Value, queueEmails: false);
-
-                if (created == 0)
-                {
-                    var user = await _minDAEsDbContext.Users.FirstOrDefaultAsync(u => u.UserName == email);
-                    if (user == null || user.UserTypeId != applicantUserTypeId)
-                    {
-                        // Never overwrite a staff member's password just because the emails match.
-                        return Conflict(new { message = "That email already belongs to a non-applicant account, so no login details were sent." });
-                    }
-
-                    // The code in the email must be the one that works. An account created for an earlier
-                    // exam may still carry that exam's code.
-                    user.PassWord = PasswordHasher.HashPassword(code);
-                    user.DatePasswordLastSet = TimeHelper.GetPhilippineTime();
-                    await _minDAEsDbContext.SaveChangesAsync();
-                }
+                // Creates the login if it's missing, or makes THIS enrollment's code its working password.
+                var plan = await _accounts.StageAccountsAsync(
+                    new[] { new ApplicantAccountRequest(en.Applicant.FullName, email, code, en.Exam.ExamTitle) },
+                    applicantTypeId.Value);
+        
+                if (plan.Conflicts.Count > 0)
+                    return Conflict(new { message = "That email already belongs to a non-applicant account, so no login details were sent." });
+        
+                await _minDAEsDbContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error preparing the applicant's account", error = ex.Message });
             }
-
+        
             try
             {
+                // Sent directly (not queued): a person clicked the button and is waiting for the result.
                 await _emailSender.SendAsync(
                     email,
                     ApplicantEmailTemplate.Subject,
-                    ApplicantEmailTemplate.Credentials(email, code, LoginUrl(), HeaderImageUrl(), isResend: true));
+                    ApplicantEmailTemplate.Credentials(email, code, _accounts.LoginUrl(), _accounts.HeaderImageUrl(),
+                        isResend: true, examTitle: en.Exam.ExamTitle));
                 return Ok(new { message = $"Login details sent to {email}." });
             }
             catch (Exception)
             {
-                // The account is ready; only the email failed, so the button can simply be pressed again.
                 return StatusCode(502, new { message = "The account is ready, but the email could not be sent. Please try again." });
             }
         }

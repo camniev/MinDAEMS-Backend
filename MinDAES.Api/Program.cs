@@ -34,7 +34,7 @@ builder.Services.AddSingleton<IEmailSender, GmailEmailSender>();
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddHostedService<EmailBackgroundService>();
 builder.Services.AddSignalR();
-
+builder.Services.AddScoped<ApplicantAccountService>();
 // adding service for authentication
 builder.Services.AddAuthentication(options =>
 {

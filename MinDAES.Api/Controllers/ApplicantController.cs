@@ -18,10 +18,12 @@ namespace MinDAES.Api.Controllers
     {
         private readonly MinDAESDbContext _mindaEsDbContext;
         private readonly IHubContext<NotificationHub> _hubContext;
-        public ApplicantController(MinDAESDbContext mindaEsDbContext, IHubContext<NotificationHub> hubContext)
+        private readonly ApplicantAccountService _accounts;
+        public ApplicantController(MinDAESDbContext mindaEsDbContext, IHubContext<NotificationHub> hubContext, ApplicantAccountService accounts)
         {
             _mindaEsDbContext = mindaEsDbContext;
             _hubContext = hubContext;
+            _accounts = accounts;
         }
 
         // add applicants
@@ -30,124 +32,135 @@ namespace MinDAES.Api.Controllers
         {
             if (data == null)
                 return BadRequest(new { message = "Request body is required." });
-
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-
-            var examExists = await _mindaEsDbContext.Exams.AnyAsync(e => e.ExamId == examId);
-            if (!examExists)
-                return NotFound(new { message = "Exam schedule not found." });
-
             if (data.Applicants.Count == 0)
                 return BadRequest(new { message = "At least one applicant is required." });
 
-            await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
-            try
+            var applicantTypeId = await _accounts.GetApplicantUserTypeIdAsync();
+            if (applicantTypeId == null)
+                return StatusCode(500, new { message = "The 'Applicant' user type was not found." });
+
+            for (var attempt = 1; ; attempt++)
             {
-                var incoming = data.Applicants
-                    .Select(a => new
-                    {
-                        Email = a.Email.Trim(),
-                        EmailKey = a.Email.Trim().ToLowerInvariant(),
-                        Name = a.Name.Trim(),
-                        a.ApplicantCode,
-                    })
-                    .GroupBy(a => a.EmailKey)
-                    .Select(g => g.First())
-                    .ToList();
-
-                var emailKeys = incoming.Select(a => a.EmailKey).ToList();
-
-                // One query for every matching existing applicant, keyed by email
-                // for in-memory lookup — applicants are a directory independent of
-                // any one exam, so someone enrolled elsewhere should be reused, not
-                // duplicated. Note: ApplicantCode is intentionally NOT read from or
-                // written to this record anymore — it's not a property of the
-                // person, it's a property of this specific application.
-                var existingApplicants = await _mindaEsDbContext.Applicants
-                    .Where(a => emailKeys.Contains(a.Email.ToLower()))
-                    .ToListAsync();
-                var applicantsByEmail = existingApplicants
-                    .ToDictionary(a => a.Email.ToLowerInvariant(), a => a);
-
-                // Applicants already on THIS exam's roster, so re-importing the same
-                // person for the same exam is a no-op rather than a duplicate
-                // enrollment row. This check is already scoped to `examId`, so a
-                // second enrollment for a DIFFERENT exam was never blocked — the
-                // bug was purely that its ApplicantCode had nowhere correct to land.
-                var existingApplicantIds = existingApplicants.Select(a => a.ApplicantId).ToList();
-                var alreadyEnrolledIds = (await _mindaEsDbContext.ExamEnrollments
-                        .Where(en => en.ExamId == examId && existingApplicantIds.Contains(en.ApplicantId))
-                        .Select(en => en.ApplicantId)
-                        .ToListAsync())
-                    .ToHashSet();
-
-                var enrolledEmails = new List<string>();
-                var skippedEmails = new List<string>();
-
-                foreach (var entry in incoming)
+                await using var transaction = await _mindaEsDbContext.Database.BeginTransactionAsync();
+                try
                 {
-                    if (!applicantsByEmail.TryGetValue(entry.EmailKey, out var applicant))
+                    // Tracked (no AsNoTracking): its serial counter is updated below.
+                    var exam = await _mindaEsDbContext.Exams.FirstOrDefaultAsync(e => e.ExamId == examId);
+                    if (exam == null)
+                        return NotFound(new { message = "Exam schedule not found." });
+
+                    // New: a closed exam's logins are removed when it closes, so adding people to it
+                    // would create accounts nothing ever cleans up. Delete this check if you disagree.
+                    if (exam.IsArchived || (exam.Status != ExamStatus.Upcoming && exam.Status != ExamStatus.Ongoing))
+                        return Conflict(new { message = "Applicants can only be added to an upcoming or ongoing exam." });
+
+                    if (string.IsNullOrWhiteSpace(exam.ExamCode))
+                        return Conflict(new { message = "This exam has no exam code, so applicant codes cannot be generated." });
+
+                    var incoming = data.Applicants
+                        .Select(a => new { Email = a.Email.Trim(), EmailKey = a.Email.Trim().ToLowerInvariant(), Name = a.Name.Trim() })
+                        .GroupBy(a => a.EmailKey)
+                        .Select(g => g.First())
+                        .ToList();
+                    var emailKeys = incoming.Select(a => a.EmailKey).ToList();
+
+                    // Applicants are a directory independent of any one exam: reuse, don't duplicate.
+                    var existingApplicants = await _mindaEsDbContext.Applicants
+                        .Where(a => emailKeys.Contains(a.Email.ToLower()))
+                        .ToListAsync();
+                    var applicantsByEmail = existingApplicants.ToDictionary(a => a.Email.ToLowerInvariant(), a => a);
+
+                    // Already on THIS exam's roster: re-importing the same person is a no-op.
+                    var existingApplicantIds = existingApplicants.Select(a => a.ApplicantId).ToList();
+                    var alreadyEnrolledIds = (await _mindaEsDbContext.ExamEnrollments
+                            .Where(en => en.ExamId == examId && existingApplicantIds.Contains(en.ApplicantId))
+                            .Select(en => en.ApplicantId)
+                            .ToListAsync())
+                        .ToHashSet();
+
+                    var skippedEmails = new List<string>();
+                    var toEnroll = new List<(Applicant Applicant, string Email, string Name)>();
+
+                    foreach (var entry in incoming)
                     {
-                        applicant = new Applicant
+                        if (!applicantsByEmail.TryGetValue(entry.EmailKey, out var applicant))
                         {
-                            ApplicantId = Guid.NewGuid(),
-                            FullName = entry.Name,
-                            Email = entry.Email,
-                            // ApplicantCode removed from here — it now lives on the
-                            // ExamEnrollment created below, since it's specific to
-                            // this application, not to the person.
-                            CreatedAt = TimeHelper.GetPhilippineTime(),
-                        };
-                        _mindaEsDbContext.Applicants.Add(applicant);
-                        // Visible to later entries in this same batch, since nothing
-                        // is flushed to the database until SaveChangesAsync below.
-                        applicantsByEmail[entry.EmailKey] = applicant;
+                            applicant = new Applicant
+                            {
+                                ApplicantId = Guid.NewGuid(),
+                                FullName = entry.Name,
+                                Email = entry.Email,
+                                CreatedAt = TimeHelper.GetPhilippineTime(),
+                            };
+                            _mindaEsDbContext.Applicants.Add(applicant);
+                            applicantsByEmail[entry.EmailKey] = applicant;
+                        }
+
+                        if (alreadyEnrolledIds.Contains(applicant.ApplicantId))
+                        {
+                            skippedEmails.Add(entry.Email);
+                            continue;
+                        }
+
+                        toEnroll.Add((applicant, entry.Email, entry.Name));
+                        alreadyEnrolledIds.Add(applicant.ApplicantId); // guards a same-batch duplicate too
                     }
 
-                    if (alreadyEnrolledIds.Contains(applicant.ApplicantId))
+                    // Reserve the serials and give each applicant their code, in the order sent.
+                    var firstSerial = exam.LastApplicantSerial + 1;
+                    if (toEnroll.Count > 0) exam.LastApplicantSerial += toEnroll.Count;
+
+                    var accountRequests = new List<ApplicantAccountRequest>();
+                    for (var i = 0; i < toEnroll.Count; i++)
                     {
-                        skippedEmails.Add(entry.Email);
-                        continue;
+                        var code = ApplicantCodes.Format(exam.ExamCode, firstSerial + i);
+                        _mindaEsDbContext.ExamEnrollments.Add(new ExamEnrollment
+                        {
+                            ExamEnrollmentId = Guid.NewGuid(),
+                            ExamId = examId,
+                            ApplicantId = toEnroll[i].Applicant.ApplicantId,
+                            ApplicantCode = code,
+                            Status = EnrollmentStatus.Invited,
+                            InvitedAt = TimeHelper.GetPhilippineTime(),
+                        });
+                        accountRequests.Add(new ApplicantAccountRequest(toEnroll[i].Name, toEnroll[i].Email, code, exam.ExamTitle));
                     }
 
-                    _mindaEsDbContext.ExamEnrollments.Add(new ExamEnrollment
+                    // Logins with the same codes, in the same transaction.
+                    var plan = await _accounts.StageAccountsAsync(accountRequests, applicantTypeId.Value);
+
+                    await _mindaEsDbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // Only now that everything is committed: email each applicant their login details.
+                    await _accounts.QueueEmailsAsync(plan);
+
+                    return Ok(new
                     {
-                        ExamEnrollmentId = Guid.NewGuid(),
-                        ExamId = examId,
-                        ApplicantId = applicant.ApplicantId,
-                        // This is the actual fix: every enrollment gets its own
-                        // code, regardless of whether the Applicant record itself
-                        // was just created or already existed from a prior exam.
-                        ApplicantCode = entry.ApplicantCode,
-                        Status = EnrollmentStatus.Invited,
-                        InvitedAt = TimeHelper.GetPhilippineTime(),
+                        message = skippedEmails.Count > 0
+                            ? $"Enrolled {toEnroll.Count} applicant(s); {skippedEmails.Count} were already enrolled and skipped."
+                            : $"Enrolled {toEnroll.Count} applicant(s).",
+                        enrolledCount = toEnroll.Count,
+                        skippedCount = skippedEmails.Count,
+                        skippedEmails,
+                        emailsQueued = plan.Created.Count + plan.PasswordUpdated.Count,
+                        accountConflicts = plan.Conflicts, // emails that belong to a staff account: enrolled, but no login created
                     });
-                    enrolledEmails.Add(entry.Email);
-                    alreadyEnrolledIds.Add(applicant.ApplicantId); // guards a same-batch duplicate too
                 }
-
-                await _mindaEsDbContext.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return Ok(new
+                catch (DbUpdateConcurrencyException) when (attempt < 3)
                 {
-                    message = skippedEmails.Count > 0
-                        ? $"Enrolled {enrolledEmails.Count} applicant(s); {skippedEmails.Count} were already enrolled and skipped."
-                        : $"Enrolled {enrolledEmails.Count} applicant(s).",
-                    enrolledCount = enrolledEmails.Count,
-                    skippedCount = skippedEmails.Count,
-                    skippedEmails,
-                });
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                return StatusCode(500, new
+                    // Someone else enrolled applicants at the same moment and moved the counter.
+                    // Start over with the fresh value so the two batches get different numbers.
+                    await transaction.RollbackAsync();
+                    _mindaEsDbContext.ChangeTracker.Clear();
+                }
+                catch (Exception ex)
                 {
-                    message = "Error enrolling applicants",
-                    error = ex.Message,
-                });
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new { message = "Error enrolling applicants", error = ex.Message });
+                }
             }
         }
 
@@ -179,24 +192,8 @@ namespace MinDAES.Api.Controllers
             }
         }
 
-        // ---- Paste these members inside ApplicantController ----
-        // REPLACES the earlier MySchedules member and the MyExam/* members + helpers
-        // (ApplicantMySchedules.cs and ApplicantExamTakingEndpoints.cs can be deleted).
-        //
-        // Needs:  using System.Security.Claims;  using Microsoft.AspNetCore.Authorization;
-        //
-        // WHO is asking comes from the signed-in user's access token — never from the
-        // request. Each action requires the Applicant role (per action, because this
-        // controller also holds HR-only endpoints like EnrollApplicants).
-
         private const string ApplicantRole = "Applicant";
 
-        // ASSUMPTION — the link between a login and a roster row: the access token
-        // carries an email claim, and that address is matched to Applicant.Email (the
-        // same value HR typed when enrolling them). That is only safe if the email on
-        // the account has been VERIFIED; otherwise anyone could register with someone
-        // else's address and see/take their exams. If your token has no email claim, or
-        // you'd rather link accounts to applicants by id, this is the one method to change.
         private string? CurrentApplicantEmail()
         {
             var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");

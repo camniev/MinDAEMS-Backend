@@ -15,9 +15,11 @@ namespace MinDAES.Api.Domain.DTOs
 
         [Required, MaxLength(256), EmailAddress]
         public string Email { get; set; } = string.Empty;
+    }
 
-        [MaxLength(50)]
-        public string? ApplicantCode { get; set; }
+    public static class ApplicantCodes
+    {
+        public static string Format(string examCode, int serial) => $"{examCode.Trim()}_{serial:D5}";
     }
 
     public class ApplicantAccountDto
