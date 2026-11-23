@@ -34,7 +34,13 @@ namespace MinDAES.Api.Controllers
         {
             var rows = await ActiveCheckers()
                 .OrderBy(u => u.Employee!.EmpName)
-                .Select(u => new { userId = u.UserId, name = u.Employee != null ? u.Employee.EmpName : u.UserName, username = u.UserName })
+                .Select(u => new 
+                { 
+                    userId = u.UserId, 
+                    name = u.Employee != null ? 
+                    u.Employee.EmpName : u.UserName, username = u.UserName,
+                    position = u.Employee.Position
+                })
                 .ToListAsync();
             return Ok(rows);
         }
