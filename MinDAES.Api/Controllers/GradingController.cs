@@ -1,26 +1,74 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MinDAES.Api.Data;
 using MinDAES.Api.Domain.Entities;
 using MinDAES.Api.Helpers;
 using MinDAES.Api.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 // ASSUMPTIONS — adjust to your project (I haven't seen these):
 //   * QuestionType has a member named Essay (ExamAttemptRules.ToClientType maps it to the
 //     'essay' / 'checkbox' strings the UI checks for)
 //   * EssayHtml is the helper from EssayHtml.cs (used here to detect an empty essay)
-// TODO: protect the whole controller, e.g. [Authorize(Roles = "...")]. It exposes the
-//       answer key and changes grades.
+// ACCESS: only Administrator, Proctor and Checker (AppRoles, in ExamCheckers.cs). Administrators and
+// Proctors can work on every exam schedule; a Checker only on schedules assigned to them
+// (EXAM_CHECKERS). Every action checks this and answers "not found" for someone else's exam.
 
 namespace MinDAES.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = AppRoles.Grading)]
     public class GradingController : ControllerBase
     {
-        private readonly MinDAESDbContext _db;
+        private readonly MinDAESDbContext _minDAESDbContext;
 
-        public GradingController(MinDAESDbContext db) => _db = db;
+        public GradingController(MinDAESDbContext db) => _minDAESDbContext = db;
+
+        // ---- who may see which exam ------------------------------------------------
+        private Guid? CurrentUserId() =>
+            Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
+
+        private bool SeesAllExams => User.IsInRole(AppRoles.Administrator) || User.IsInRole(AppRoles.Proctor);
+
+        private async Task<bool> CanGradeExamAsync(Guid examId)
+        {
+            if (SeesAllExams) return true;
+            var userId = CurrentUserId();
+            if (userId == null) return false;
+            return await _minDAESDbContext.Set<ExamChecker>().AnyAsync(c => c.ExamId == examId && c.UserId == userId);
+        }
+
+        // GET api/Grading/Exams
+        // The exams this user may check: all of them for an Administrator/Proctor, only the assigned
+        // ones for a Checker. Replaces the Checking screen's use of GetExamSchedules, which returns
+        // far more (the whole roster and every answer key) than a checker should receive.
+        [HttpGet("Exams")]
+        public async Task<ActionResult> GetGradableExams()
+        {
+            var query = _minDAESDbContext.Exams.AsNoTracking().Where(e => !e.IsArchived && e.Status != ExamStatus.Upcoming);
+
+            if (!SeesAllExams)
+            {
+                var userId = CurrentUserId();
+                query = query.Where(e => _minDAESDbContext.Set<ExamChecker>().Any(c => c.ExamId == e.ExamId && c.UserId == userId));
+            }
+
+            var rows = await query
+                .OrderByDescending(e => e.ExamDate).ThenByDescending(e => e.StartTime)
+                .Select(e => new { e.ExamId, e.ExamTitle, e.ExamCode, e.Status, e.ExamDate })
+                .ToListAsync();
+
+            return Ok(rows.Select(e => new
+            {
+                examId = e.ExamId,
+                examTitle = e.ExamTitle,
+                examCode = e.ExamCode,
+                status = e.Status.ToString(),
+                examDate = e.ExamDate.ToString("yyyy-MM-dd")
+            }));
+        }
 
         private const int MaxPrintBatch = 200; // one print job; keeps the page and the response manageable
 
@@ -31,12 +79,15 @@ namespace MinDAES.Api.Controllers
         [HttpGet("{examId:guid}/Roster")]
         public async Task<ActionResult> GetRoster(Guid examId)
         {
-            var exam = await _db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.ExamId == examId);
+            if (!await CanGradeExamAsync(examId))
+                return NotFound(new { message = "Exam schedule not found." });
+
+            var exam = await _minDAESDbContext.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.ExamId == examId);
             if (exam == null)
                 return NotFound(new { message = "Exam schedule not found." });
 
             // Enum -> string is done after the query so the SQL translation stays simple.
-            var rows = await _db.Set<ExamEnrollment>().AsNoTracking()
+            var rows = await _minDAESDbContext.Set<ExamEnrollment>().AsNoTracking()
                 .Where(en => en.ExamId == examId)
                 .OrderBy(en => en.Applicant!.FullName)
                 .Select(en => new
@@ -62,14 +113,14 @@ namespace MinDAES.Api.Controllers
         [HttpGet("Enrollments/{enrollmentId:guid}")]
         public async Task<ActionResult> GetSubmission(Guid enrollmentId)
         {
-            var en = await _db.Set<ExamEnrollment>().AsNoTracking()
+            var en = await _minDAESDbContext.Set<ExamEnrollment>().AsNoTracking()
                 .Include(e => e.Applicant)
                 .Include(e => e.Exam).ThenInclude(x => x!.Questions).ThenInclude(q => q.Options)
                 .Include(e => e.Answers).ThenInclude(a => a.SelectedOptions)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(e => e.ExamEnrollmentId == enrollmentId);
 
-            if (en?.Exam == null || en.Applicant == null)
+            if (en?.Exam == null || en.Applicant == null || !await CanGradeExamAsync(en.ExamId))
                 return NotFound(new { message = "Enrollment not found." });
 
             var questions = en.Exam.Questions
@@ -112,13 +163,13 @@ namespace MinDAES.Api.Controllers
             if (request == null)
                 return BadRequest(new { message = "Request body is required." });
 
-            var en = await _db.Set<ExamEnrollment>()
+            var en = await _minDAESDbContext.Set<ExamEnrollment>()
                 .Include(e => e.Exam).ThenInclude(x => x!.Questions).ThenInclude(q => q.Options)
                 .Include(e => e.Answers).ThenInclude(a => a.SelectedOptions)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(e => e.ExamEnrollmentId == enrollmentId);
 
-            if (en?.Exam == null)
+            if (en?.Exam == null || !await CanGradeExamAsync(en.ExamId))
                 return NotFound(new { message = "Enrollment not found." });
             if (en.SubmittedAt == null)
                 return Conflict(new { message = "This applicant has not submitted the exam yet." });
@@ -133,7 +184,7 @@ namespace MinDAES.Api.Controllers
             if (marks.Keys.Any(id => !questions.ContainsKey(id)))
                 return BadRequest(new { message = "A mark refers to a question that is not in this exam." });
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
+            await using var transaction = await _minDAESDbContext.Database.BeginTransactionAsync();
             try
             {
                 foreach (var a in en.Answers)
@@ -167,7 +218,7 @@ namespace MinDAES.Api.Controllers
                         : 0m;
                 }
 
-                await _db.SaveChangesAsync();
+                await _minDAESDbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return Ok(new
@@ -199,7 +250,10 @@ namespace MinDAES.Api.Controllers
         public async Task<ActionResult> GetPrintData(Guid examId, [FromBody] PrintRequest? request)
         {
             Console.WriteLine($"GetPrintData called for exam {examId}, request: {request?.ExamEnrollmentIds?.Count ?? 0} applicants");
-            var exam = await _db.Exams.AsNoTracking()
+            if (!await CanGradeExamAsync(examId))
+                return NotFound(new { message = "Exam schedule not found." });
+
+            var exam = await _minDAESDbContext.Exams.AsNoTracking()
                 .Include(e => e.Questions).ThenInclude(q => q.Options)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(e => e.ExamId == examId);
@@ -208,7 +262,7 @@ namespace MinDAES.Api.Controllers
 
             var ids = request?.ExamEnrollmentIds ?? new List<Guid>();
 
-            var enrollmentsQuery = _db.Set<ExamEnrollment>().AsNoTracking()
+            var enrollmentsQuery = _minDAESDbContext.Set<ExamEnrollment>().AsNoTracking()
                 .Where(en => en.ExamId == examId);
             if (ids.Count > 0)
                 enrollmentsQuery = enrollmentsQuery.Where(en => ids.Contains(en.ExamEnrollmentId));

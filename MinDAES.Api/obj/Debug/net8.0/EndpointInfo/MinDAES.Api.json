@@ -117,6 +117,48 @@
         }
       }
     },
+    "/api/Applicant/MyExam/{enrollmentId}/Events": {
+      "post": {
+        "tags": [
+          "Applicant"
+        ],
+        "parameters": [
+          {
+            "name": "enrollmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExamEventRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExamEventRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExamEventRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Applicant/MyExam/{enrollmentId}/Attachments/{attachmentId}": {
       "get": {
         "tags": [
@@ -293,37 +335,6 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/UserRegistrationModel"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Auth/RegisterApplicants": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterApplicantsRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterApplicantsRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterApplicantsRequest"
               }
             }
           }
@@ -956,6 +967,93 @@
         }
       }
     },
+    "/api/ExamChecker/Checkers": {
+      "get": {
+        "tags": [
+          "ExamChecker"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/ExamChecker/Exam/{examId}/Checkers": {
+      "get": {
+        "tags": [
+          "ExamChecker"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ExamChecker"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCheckersRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCheckersRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCheckersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Grading/Exams": {
+      "get": {
+        "tags": [
+          "Grading"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Grading/{examId}/Roster": {
       "get": {
         "tags": [
@@ -1037,6 +1135,88 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Grading/{examId}/PrintData": {
+      "post": {
+        "tags": [
+          "Grading"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Monitoring/Incidents": {
+      "get": {
+        "tags": [
+          "Monitoring"
+        ],
+        "parameters": [
+          {
+            "name": "examId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 12
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -1409,24 +1589,6 @@
         },
         "additionalProperties": false
       },
-      "ApplicantAccountDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "applicantCode": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "ApplicantAttachmentDto": {
         "type": "object",
         "properties": {
@@ -1462,11 +1624,6 @@
             "minLength": 1,
             "type": "string",
             "format": "email"
-          },
-          "applicantCode": {
-            "maxLength": 50,
-            "type": "string",
-            "nullable": true
           }
         },
         "additionalProperties": false
@@ -1573,6 +1730,20 @@
           "userId": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignCheckersRequest": {
+        "type": "object",
+        "properties": {
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
             "nullable": true
           }
         },
@@ -1741,6 +1912,10 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "lastApplicantSerial": {
+            "type": "integer",
+            "format": "int32"
           },
           "attachments": {
             "type": "array",
@@ -1991,6 +2166,21 @@
         },
         "additionalProperties": false
       },
+      "ExamEventRequest": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "awaySeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ExamQuestionOptionResponseDto": {
         "type": "object",
         "properties": {
@@ -2207,6 +2397,20 @@
         },
         "additionalProperties": false
       },
+      "PrintRequest": {
+        "type": "object",
+        "properties": {
+          "examEnrollmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "Question": {
         "required": [
           "examId",
@@ -2366,19 +2570,6 @@
         ],
         "type": "integer",
         "format": "int32"
-      },
-      "RegisterApplicantsRequest": {
-        "type": "object",
-        "properties": {
-          "applicants": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ApplicantAccountDto"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
       },
       "SaveExamQuestionsDto": {
         "required": [

@@ -255,6 +255,31 @@ namespace MinDAES.Api.Migrations
                     b.ToTable("EXAM_ATTACHMENTS");
                 });
 
+            modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamChecker", b =>
+                {
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("ExamId");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("UserId");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("AssignedAt");
+
+                    b.Property<Guid?>("AssignedByUserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("AssignedByUserId");
+
+                    b.HasKey("ExamId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EXAM_CHECKERS");
+                });
+
             modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamEnrollment", b =>
                 {
                     b.Property<Guid>("ExamEnrollmentId")
@@ -548,6 +573,25 @@ namespace MinDAES.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Exam");
+                });
+
+            modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamChecker", b =>
+                {
+                    b.HasOne("MinDAES.Api.Domain.Entities.Exam", "Exam")
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MinDAES.Api.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MinDAES.Api.Domain.Entities.ExamEnrollment", b =>

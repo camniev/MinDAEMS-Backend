@@ -85,6 +85,27 @@
   },
   {
     "ContainingType": "MinDAES.Api.Controllers.ApplicantController",
+    "Method": "ReportExamEvent",
+    "RelativePath": "api/Applicant/MyExam/{enrollmentId}/Events",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "enrollmentId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "body",
+        "Type": "MinDAES.Api.Domain.DTOs.ExamEventRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ApplicantController",
     "Method": "StartMyExam",
     "RelativePath": "api/Applicant/MyExam/{enrollmentId}/Start",
     "HttpMethod": "POST",
@@ -197,22 +218,6 @@
       {
         "Name": "model",
         "Type": "MinDAES.Api.Domain.DTOs.UserRegistrationModel",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "MinDAES.Api.Controllers.AuthController",
-    "Method": "RegisterApplicants",
-    "RelativePath": "api/Auth/RegisterApplicants",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "model",
-        "Type": "MinDAES.Api.Domain.DTOs.RegisterApplicantsRequest",
         "IsRequired": true
       }
     ],
@@ -555,6 +560,74 @@
     ]
   },
   {
+    "ContainingType": "MinDAES.Api.Controllers.ExamCheckerController",
+    "Method": "GetAvailableCheckers",
+    "RelativePath": "api/ExamChecker/Checkers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ExamCheckerController",
+    "Method": "GetAssigned",
+    "RelativePath": "api/ExamChecker/Exam/{examId}/Checkers",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.ExamCheckerController",
+    "Method": "ReplaceAssigned",
+    "RelativePath": "api/ExamChecker/Exam/{examId}/Checkers",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "body",
+        "Type": "MinDAES.Api.Controllers.ExamCheckerController\u002BAssignCheckersRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.GradingController",
+    "Method": "GetPrintData",
+    "RelativePath": "api/Grading/{examId}/PrintData",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "PrintRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "MinDAES.Api.Controllers.GradingController",
     "Method": "GetRoster",
     "RelativePath": "api/Grading/{examId}/Roster",
@@ -602,6 +675,42 @@
       {
         "Name": "request",
         "Type": "GradeRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.GradingController",
+    "Method": "GetGradableExams",
+    "RelativePath": "api/Grading/Exams",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "MinDAES.Api.Controllers.MonitoringController",
+    "Method": "GetIncidents",
+    "RelativePath": "api/Monitoring/Incidents",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "examId",
+        "Type": "System.Nullable\u00601[[System.Guid, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "hours",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "limit",
+        "Type": "System.Int32",
         "IsRequired": false
       }
     ],

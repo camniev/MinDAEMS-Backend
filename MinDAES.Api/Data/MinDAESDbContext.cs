@@ -22,6 +22,7 @@ namespace MinDAES.Api.Data
         public DbSet<UserType> UserTypes { get; set; }
         public DbSet<Employee> Employees { get; set; }
         public DbSet<ExamIncident> ExamIncidents { get; set; }
+        public DbSet<ExamChecker> ExamCheckers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -82,6 +83,14 @@ namespace MinDAES.Api.Data
             modelBuilder.Entity<ExamEnrollment>()
                 .HasIndex(e => new { e.ExamId, e.ApplicantCode })
                 .IsUnique();
+
+            modelBuilder.Entity<ExamChecker>().HasKey(c => new { c.ExamId, c.UserId });
+            // Restrict, not cascade: Exam already reaches User through CreatedByUserId, and SQL Server
+            // rejects a second cascade path. To retire a checker, deactivate the account (IsActive = false).
+            modelBuilder.Entity<ExamChecker>()
+                .HasOne(c => c.User).WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ExamChecker>()
+                .HasOne(c => c.Exam).WithMany().HasForeignKey(c => c.ExamId).OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
