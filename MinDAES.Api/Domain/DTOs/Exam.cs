@@ -1,4 +1,5 @@
-﻿using Microsoft.Identity.Client;
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.Identity.Client;
 
 namespace MinDAES.Api.Domain.DTOs
 {
@@ -14,6 +15,30 @@ namespace MinDAES.Api.Domain.DTOs
         public string Instructions { get; set; }
         public string AccessType { get; set; }
         public Guid UserId { get; set; }
+    }
+
+    public class UpdateExamScheduleDto
+    {
+        [Required, MaxLength(255)]
+        public string? ExamTitle { get; set; }
+
+        [Required, MaxLength(50)]
+        public string? ExamCode { get; set; }
+
+        [Required]
+        public string? ExamDate { get; set; }
+
+        [Required]
+        public string? StartTime { get; set; }
+
+        public int DurationMinutes { get; set; }
+        public int PassingScore { get; set; }
+
+        [MaxLength(4000)]
+        public string? Instructions { get; set; }
+
+        [Required]
+        public string? AccessType { get; set; }
     }
 
     // ---- Response DTOs ----

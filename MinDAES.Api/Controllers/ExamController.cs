@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MinDAES.Api.Data;
@@ -67,6 +68,92 @@ namespace MinDAES.Api.Controllers
             }
         }
 
+        // TODO: the controller's other actions are open (no token). This one is protected; the client
+        // sends the login token for it. Change the roles to whoever may edit schedules.
+        [Authorize(Roles = AppRoles.Assigners)]
+        [HttpPut("{examId:guid}")]
+        public async Task<ActionResult> UpdateExamSchedule(Guid examId, [FromBody] UpdateExamScheduleDto? data)
+        {
+            if (data == null)
+                return BadRequest(new { message = "Request body is required." });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var exam = await _mindaEsDbContext.Exams.FirstOrDefaultAsync(e => e.ExamId == examId);
+            if (exam == null)
+                return NotFound(new { message = "Exam schedule not found." });
+
+            if (exam.IsArchived)
+                return Conflict(new { message = "An archived exam schedule can't be edited. Restore it first." });
+            if (exam.Status != ExamStatus.Upcoming && exam.Status != ExamStatus.Ongoing)
+                return Conflict(new { message = $"A {exam.Status} exam schedule can't be edited." });
+
+            // ---- validate and parse the new values ----
+            var errors = new List<string>();
+            if (!DateOnly.TryParse(data.ExamDate, out var examDate)) errors.Add("Exam date is not a valid date.");
+            if (!TimeOnly.TryParse(data.StartTime, out var startTime)) errors.Add("Start time is not a valid time.");
+            if (data.DurationMinutes is < 1 or > 1440) errors.Add("Duration must be between 1 and 1440 minutes.");
+            if (data.PassingScore is < 1 or > 100) errors.Add("Passing score must be between 1 and 100.");
+            if (!Enum.TryParse<ExamAccessType>(data.AccessType, ignoreCase: true, out var accessType))
+                errors.Add("Access type must be Private or Public.");
+            var title = data.ExamTitle!.Trim();
+            var code = data.ExamCode!.Trim();
+            if (title.Length == 0) errors.Add("Exam title is required.");
+            if (code.Length == 0 || code.Any(char.IsWhiteSpace)) errors.Add("Exam code is required and can't contain spaces.");
+            if (errors.Count > 0)
+                return BadRequest(new { message = string.Join(" ", errors), errors });
+
+            var instructions = string.IsNullOrWhiteSpace(data.Instructions) ? null : data.Instructions.Trim();
+
+            // ---- what is locked for this status ----
+            var locked = new List<string>();
+            if (exam.Status == ExamStatus.Ongoing)
+            {
+                if (code != exam.ExamCode) locked.Add("exam code");
+                if (examDate != exam.ExamDate) locked.Add("exam date");
+                if (startTime != exam.StartTime) locked.Add("start time");
+                if (data.DurationMinutes != exam.DurationMinutes) locked.Add("duration");
+                if (data.PassingScore != exam.PassingScore) locked.Add("passing score");
+                if (accessType != exam.AccessType) locked.Add("access type");
+            }
+            else if (code != exam.ExamCode && await _mindaEsDbContext.ExamEnrollments.AnyAsync(en => en.ExamId == examId))
+            {
+                // Applicant codes already issued begin with the old exam code.
+                locked.Add("exam code");
+            }
+            if (locked.Count > 0)
+            {
+                var why = exam.Status == ExamStatus.Ongoing
+                    ? "can't be changed while the exam is ongoing"
+                    : "can't be changed once applicants are enrolled";
+                return Conflict(new { message = $"The {string.Join(", ", locked)} {why}." });
+            }
+
+            // ---- apply ----
+            exam.ExamTitle = title;
+            exam.Instructions = instructions;
+            if (exam.Status == ExamStatus.Upcoming)
+            {
+                exam.ExamCode = code;
+                exam.ExamDate = examDate;
+                exam.StartTime = startTime;
+                exam.DurationMinutes = data.DurationMinutes;
+                exam.PassingScore = data.PassingScore;
+                exam.AccessType = accessType;
+            }
+            exam.UpdatedAt = TimeHelper.GetPhilippineTime();
+
+            try
+            {
+                await _mindaEsDbContext.SaveChangesAsync();
+                return Ok(new { message = "Exam schedule updated." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating exam schedule", error = ex.Message });
+            }
+        }
+
         [HttpGet("GetExamSchedules")]
         public async Task<ActionResult<List<ExamScheduleResponseDto>>> GetExamSchedules(
             [FromQuery] bool includeArchived = false)
@@ -86,7 +173,7 @@ namespace MinDAES.Api.Controllers
                     .ThenByDescending(e => e.StartTime)
                 .ToListAsync();
 
-            // PDF: metadata only, in a separate query. Do NOT .Include(e => e.Attachments) above —
+            // PDF: metadata only, in a separate query. Do NOT .Include(e => e.Attachments) above ï¿½
             // that would load every PDF's bytes just to list file names.
             var examIds = exams.Select(e => e.ExamId).ToList();
             var attachmentRows = await _mindaEsDbContext.Set<ExamAttachment>()
@@ -254,7 +341,7 @@ namespace MinDAES.Api.Controllers
 
         // Hard-deletes the login accounts (Users rows plus their linked Employee rows) of this
         // exam's roster, with two guards:
-        //  1. Only users of type "Applicant" — an applicant's email can match a staff account's
+        //  1. Only users of type "Applicant" ï¿½ an applicant's email can match a staff account's
         //     username, and that must never be deleted.
         //  2. Skips anyone still enrolled in another exam that is Upcoming or Ongoing. One account
         //     is shared across every exam an applicant is enrolled in (RegisterApplicants reuses it),
